@@ -96,42 +96,7 @@ async function runTests() {
       console.log('   Shared notes for student2:', sharedData.total);
       console.log('   First shared note title:', sharedData.notes[0]?.title, 'Role:', sharedData.notes[0]?.user_role);
 
-      // 8. Test AI Summary
-      console.log('8. Testing AI Summary...');
-      const aiSummaryRes = await fetch(`${baseUrl}/ai/summary`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          title: 'Kế hoạch ôn tập thi',
-          content: 'Cần ôn tập kỹ các phần: JWT, Bcrypt, Socket.io collaboration, Docker Compose và Auto-save.'
-        })
-      });
-      const aiSummaryData = await aiSummaryRes.json();
-      console.log('   AI Summary generated:', aiSummaryData.success);
-      console.log('   Summary preview:', aiSummaryData.summary?.substring(0, 70));
-
-      // 9. Test AI Q&A with references
-      console.log('9. Testing AI Q&A with References...');
-      const aiQaRes = await fetch(`${baseUrl}/ai/qa`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          question: 'Hạn nộp đồ án cuối kỳ là ngày nào?'
-        })
-      });
-      const aiQaData = await aiQaRes.json();
-      console.log('   AI QA success:', aiQaData.success);
-      console.log('   AI QA answer preview:', aiQaData.answer?.substring(0, 70));
-      console.log('   AI QA references count:', aiQaData.references?.length);
-      console.log('   AI QA referenced note:', aiQaData.references?.[0]?.title);
-
-      console.log('\n🎉 TẤT CẢ 9 BỘ TEST RESTful API ĐỀU CHẠY THÀNH CÔNG RỰC RỠ!');
+      console.log('\n🎉 TẤT CẢ 7 BỘ TEST RESTful API ĐỀU CHẠY THÀNH CÔNG RỰC RỠ!');
     } catch (testErr) {
       console.error('Test error:', testErr);
     } finally {

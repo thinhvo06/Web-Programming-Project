@@ -49,7 +49,6 @@ services:
       SMTP_USER: ""
       SMTP_PASS: ""
       SMTP_FROM: "TDTU Note App <noreply@tdtu.edu.vn>"
-      GEMINI_API_KEY: ""
     ports:
       - "5000:5000"
     volumes:

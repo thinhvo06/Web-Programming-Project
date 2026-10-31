@@ -16,9 +16,6 @@ I. TỔNG QUAN HỆ THỐNG VÀ CÔNG NGHỆ BACK-END
 - Mã hóa & Bảo mật: Bcryptjs (Băm mật khẩu người dùng và mật khẩu riêng cho từng ghi chú), JWT (JSON Web Token)
 - Xử lý tệp tin: Multer (Kiểm soát chặt chẽ dung lượng và định dạng ảnh đại diện, file tài liệu/video đính kèm)
 - Dịch vụ Email: Nodemailer SMTP (Gửi mail kích hoạt tài khoản, mã OTP khôi phục mật khẩu, thông báo chia sẻ ghi chú)
-- Tích hợp AI: Google Gemini API (gemini-2.5-flash / gemini-1.5-flash) cho 2 chức năng:
-  + Tóm tắt ghi chú (AI Summary) có hỗ trợ nút Regenerate
-  + Hỏi đáp ngữ cảnh (AI Q&A) tự động trích dẫn và đính kèm liên kết đến các ghi chú tham chiếu.
 
 
 II. DANH SÁCH TÀI KHOẢN VÀ DỮ LIỆU KIỂM THỬ (SEED DEMO DATA)
@@ -32,7 +29,7 @@ Hệ thống đã có sẵn lệnh Seed dữ liệu để chấm đủ 32 tiêu 
    - Dữ liệu có sẵn:
      * 2 Ghi chú được ghim lên đầu (Sắp xếp theo thứ tự pinned_at: ghi chú ghim sau nằm trên)
      * 1 Ghi chú đã khóa mật khẩu riêng biệt (Mật khẩu mở khóa: note123456)
-     * 1 Ghi chú chứa kiến thức LLM để test AI Summary & AI Q&A
+     * 1 Ghi chú tài liệu tham khảo công nghệ Web hiện đại
      * 1 Ghi chú chia sẻ cho student2 với quyền CHỈNH SỬA (Edit) để test WebSocket Realtime
      * 1 Ghi chú chia sẻ cho student2 với quyền CHỈ XEM (Read-only)
      * Đầy đủ các nhãn: "Học tập", "Công việc", "Web Programming", "Cá nhân"
@@ -134,11 +131,7 @@ IV. DANH SÁCH ENDPOINTS RESTFUL API CHÍNH
    - PUT    /api/shares/shares/:shareId  : Đổi quyền hạn (Read <=> Edit)
    - DELETE /api/shares/shares/:shareId  : Thu hồi quyền chia sẻ ghi chú
 
-7. Trí tuệ nhân tạo (AI Gemini API):
-   - POST   /api/ai/summary              : Tóm tắt 1 ghi chú (có nút Regenerate)
-   - POST   /api/ai/qa                   : Hỏi đáp tự nhiên trên toàn bộ ghi chú (Kèm danh sách ID và Tiêu đề các ghi chú trích dẫn tham chiếu để click mở trực tiếp)
-
-8. WebSocket Collaboration (Socket.io):
+7. WebSocket Collaboration (Socket.io):
    - Endpoint: ws://localhost:5000 (Xác thực bằng token JWT ở handshake)
    - Room: note:<noteId>
    - Events phát: note-change, user-typing, leave-note
@@ -151,11 +144,7 @@ Câu 1: Tại sao mỗi note lại có password riêng và lưu trữ như thế
 Trả lời: 
 Mỗi ghi chú có thể chứa thông tin nhạy cảm riêng biệt nên cần mật khẩu độc lập, không dùng chung với mật khẩu tài khoản. Trong cơ sở dữ liệu, cột `password_hash` trong bảng `notes` lưu mật khẩu đã được băm an toàn bằng thuật toán Bcrypt kèm salt ngẫu nhiên. Khi người dùng muốn xem, sửa hoặc xóa ghi chú đã khóa, client phải gửi mật khẩu lên endpoint `/api/notes/:id/unlock`; server thực hiện so khớp `bcrypt.compare`. Nếu khớp, server mới trả về nội dung giải mã hoặc cho phép thao tác.
 
-Câu 2: AI Q&A hoạt động ra sao để trích dẫn đúng note tham chiếu?
-Trả lời: 
-Khi người dùng đặt câu hỏi, Back-end truy vấn tất cả các ghi chú thuộc quyền sở hữu của người dùng đó (và các ghi chú được chia sẻ hợp lệ). Sau đó, BE đưa danh sách ghi chú (gồm ID, Tiêu đề, Nội dung) vào context prompt gửi cho mô hình LLM (Gemini API) kèm ràng buộc: "Chỉ trả lời dựa trên ngữ cảnh được cung cấp và bắt buộc liệt kê danh sách ID các ghi chú đã sử dụng theo cú pháp chuẩn". Server sau đó parse các ID ghi chú từ kết quả của AI và trả về client danh sách `references: [{ id, title }]` để giao diện hiển thị thành các nút/liên kết click mở trực tiếp ghi chú.
-
-Câu 3: Khi xóa một nhãn (Label), tại sao các ghi chú không bị xóa?
+Câu 2: Khi xóa một nhãn (Label), tại sao các ghi chú không bị xóa?
 Trả lời: 
 Do kiến trúc cơ sở dữ liệu tuân thủ chuẩn quan hệ nhiều - nhiều (n-n) thông qua bảng trung gian `note_labels` (chứa 2 khóa ngoại: `note_id` và `label_id`). Khi người dùng xóa một nhãn trong bảng `labels`, server chỉ xóa các bản ghi liên kết tương ứng trong bảng `note_labels`, còn dữ liệu các ghi chú trong bảng `notes` hoàn toàn được bảo toàn nguyên vẹn.
 ================================================================================

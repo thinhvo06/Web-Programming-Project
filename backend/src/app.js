@@ -12,7 +12,6 @@ const noteRoutes = require('./routes/note.routes');
 const labelRoutes = require('./routes/label.routes');
 const shareRoutes = require('./routes/share.routes');
 const attachmentRoutes = require('./routes/attachment.routes');
-const aiRoutes = require('./routes/ai.routes');
 
 const app = express();
 
@@ -63,7 +62,6 @@ app.use('/api/notes', noteRoutes);
 app.use('/api/labels', labelRoutes);
 app.use('/api/shares', shareRoutes);
 app.use('/api/attachments', attachmentRoutes);
-app.use('/api/ai', aiRoutes);
 
 // 404 handler
 app.use((req, res, next) => {

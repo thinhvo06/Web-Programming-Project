@@ -92,11 +92,11 @@ async function seedData() {
     });
     await note2.setLabels([labelHocTap.id, labelCongViec.id]);
 
-    // Note 3: Regular note with AI content for AI Summary & AI Q&A testing
+    // Note 3: Regular note
     const note3 = await Note.create({
       user_id: user1.id,
-      title: 'Tóm tắt kiến thức Trí tuệ nhân tạo và LLM',
-      content: 'Large Language Models (LLM) như Google Gemini hoặc GPT hoạt động dựa trên kiến trúc Transformer. Trong ứng dụng Note App, chúng ta sử dụng Gemini API để tóm tắt văn bản và trả lời câu hỏi dựa trên ngữ cảnh (Retrieval-Augmented Generation đơn giản). Kết quả trả về cần có trích dẫn các ghi chú tham chiếu để người dùng tiện tra cứu.',
+      title: 'Tài liệu tham khảo Công nghệ Web hiện đại',
+      content: 'Tổng hợp tài liệu học tập về React, Service Worker, IndexedDB cho PWA, Express RESTful API, Sequelize ORM và Socket.io. Cần lưu ý các nguyên tắc thiết kế giao diện Responsive và Auto-save debounce.',
       is_pinned: false,
       pinned_at: null,
       color: '#e9d5ff',
