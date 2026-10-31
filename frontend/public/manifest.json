@@ -1,0 +1,17 @@
+{
+  "short_name": "NoteApp",
+  "name": "NoteApp - Quản lý Ghi chú",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "description": "Ứng dụng ghi chú cá nhân hỗ trợ hoạt động ngoại tuyến và tự động lưu"
+}
