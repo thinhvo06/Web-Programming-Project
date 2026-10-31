@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Phân Công Nhiệm Vụ Đồ Án Cuối Kỳ - TDTU Web Programming</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 12mm 12mm 12mm 12mm;
+        }
+        * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #1f2937;
+            line-height: 1.4;
+            font-size: 11.5px;
+            margin: 0;
+            padding: 0;
+            background-color: #ffffff;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #003366;
+            padding-bottom: 6px;
+            margin-bottom: 10px;
+        }
+        .header h3 {
+            margin: 0 0 2px 0;
+            color: #b91c1c;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 700;
+        }
+        .header h1 {
+            margin: 3px 0;
+            color: #003366;
+            font-size: 17px;
+            text-transform: uppercase;
+            font-weight: 800;
+        }
+        .header .meta {
+            font-size: 11px;
+            color: #4b5563;
+        }
+        .deadline-badge {
+            display: inline-block;
+            background-color: #dc2626;
+            color: #fff;
+            padding: 3px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+        .section-title {
+            background: linear-gradient(90deg, #003366, #1e40af);
+            color: white;
+            padding: 5px 8px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            border-radius: 3px;
+            margin-top: 10px;
+            margin-bottom: 6px;
+        }
+        .section-title.red {
+            background: linear-gradient(90deg, #991b1b, #dc2626);
+        }
+        .member-boxes {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        .member-card {
+            flex: 1;
+            border: 1px solid #cbd5e1;
+            border-top: 3px solid #003366;
+            border-radius: 4px;
+            padding: 6px 10px;
+            background-color: #f8fafc;
+        }
+        .member-card.be {
+            border-top-color: #ea580c;
+        }
+        .member-card h4 {
+            margin: 0 0 2px 0;
+            font-size: 12px;
+            color: #003366;
+        }
+        .member-card.be h4 {
+            color: #c2410c;
+        }
+        .member-card ul {
+            margin: 2px 0 0 14px;
+            padding: 0;
+            font-size: 11px;
+        }
+        .member-card li {
+            margin-bottom: 1px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10.5px;
+            margin-bottom: 8px;
+        }
+        th {
+            background-color: #003366;
+            color: white;
+            text-align: left;
+            padding: 5px 6px;
+            font-weight: 600;
+            border: 1px solid #002244;
+        }
+        td {
+            padding: 4px 6px;
+            border: 1px solid #cbd5e1;
+            vertical-align: top;
+        }
+        tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+        .tag {
+            display: inline-block;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-size: 9.5px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .tag-fe {
+            background-color: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+        }
+        .tag-be {
+            background-color: #ffedd5;
+            color: #c2410c;
+            border: 1px solid #fed7aa;
+        }
+        .tag-both {
+            background-color: #f3e8ff;
+            color: #6b21a8;
+            border: 1px solid #e9d5ff;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .text-danger {
+            color: #b91c1c;
+            font-weight: bold;
+        }
+        .alert-box {
+            background-color: #fffbeb;
+            border-left: 3px solid #d97706;
+            padding: 6px 10px;
+            margin-bottom: 8px;
+            font-size: 11px;
+            border-radius: 0 3px 3px 0;
+        }
+        .danger-box {
+            background-color: #fef2f2;
+            border-left: 3px solid #dc2626;
+            padding: 6px 10px;
+            margin-bottom: 8px;
+            font-size: 11px;
+            border-radius: 0 3px 3px 0;
+        }
+        .danger-box ul, .alert-box ul {
+            margin: 2px 0 0 14px;
+            padding: 0;
+        }
+        .page-break {
+            page-break-before: always;
+        }
+        .qa-card {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-left: 3px solid #003366;
+            padding: 5px 8px;
+            margin-bottom: 5px;
+            font-size: 10.5px;
+            border-radius: 0 3px 3px 0;
+        }
+        .qa-card.be-card {
+            border-left-color: #ea580c;
+        }
+        .qa-card strong {
+            color: #0f172a;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ==================== TRANG 1 ==================== -->
+    <div class="header">
+        <h3>ĐẠI HỌC TÔN ĐỨC THẮNG &bull; KHOA CÔNG NGHỆ THÔNG TIN</h3>
+        <h1>KẾ HOẠCH PHÂN CÔNG NHIỆM VỤ ĐỒ ÁN CUỐI KỲ</h1>
+        <div class="meta">
+            <strong>Môn học:</strong> 503073 – Lập trình & Ứng dụng Web &nbsp;|&nbsp; 
+            <strong>Học kỳ:</strong> I / 2026-2027 &nbsp;|&nbsp; 
+            <strong>Đề tài:</strong> Ứng dụng Quản lý Ghi chú (Note App)
+        </div>
+        <div class="deadline-badge">
+            DEADLINE NỘP BÀI: 11:59 TRƯA THỨ HAI, NGÀY 02/11/2026
+        </div>
+    </div>
+
+    <div class="danger-box">
+        <strong>⚠️ 4 NGUYÊN TẮC BẮT BUỘC TUYỆT ĐỐI THEO QUY ĐỊNH ĐỀ BÀI (VI PHẠM LÀ 0 ĐIỂM HOẶC BỊ TRỪ NẶNG):</strong>
+        <ul>
+            <li><strong>Tuân thủ chữ đỏ (Red text):</strong> Chỉ làm đúng các tính năng trong đề. Tuyệt đối KHÔNG tự thêm tính năng lạ (thùng rác, lưu trữ, xuất file...); Form Tạo & Sửa note bắt buộc chung 1 màn hình; Phải tự động lưu (Auto-save), không được có nút Lưu; Xóa note bắt buộc có popup xác nhận.</li>
+            <li><strong>Quy định GitHub:</strong> Mỗi thành viên bắt buộc có ít nhất 2 commit có ý nghĩa mỗi tuần (tránh commit rỗng/format).</li>
+            <li><strong>Video Demo (.mp4):</strong> Bắt buộc có mặt và giọng nói của <strong>cả 2 thành viên</strong>, demo tuần tự đủ 32 tiêu chí trong Rubric.</li>
+            <li><strong>Vấn đáp cá nhân:</strong> Giảng viên kiểm tra riêng từng bạn, hỏi sâu kiến trúc và có thể bắt sửa code trực tiếp tại chỗ.</li>
+        </ul>
+    </div>
+
+    <div class="section-title">1. TỔNG QUAN PHÂN VAI (FRONT-END VS BACK-END)</div>
+    <div class="member-boxes">
+        <div class="member-card">
+            <h4>THÀNH VIÊN 1: FRONT-END, UI/UX & PWA OFFLINE</h4>
+            <ul>
+                <li><strong>Giao diện & Tương tác:</strong> React/Blade + Tailwind/Bootstrap; Grid/List layout; Live search debounce.</li>
+                <li><strong>Auto-save:</strong> Cơ chế tự lưu ngầm không dùng nút bấm (Debounce 300-500ms).</li>
+                <li><strong>WebSocket Client:</strong> Đồng bộ nội dung ghi chú thời gian thực khi cộng tác nhiều người.</li>
+                <li><strong>PWA & Responsive:</strong> Service Worker + IndexedDB xem/sửa offline; Chuẩn hóa Mobile, Tablet, PC.</li>
+            </ul>
+        </div>
+        <div class="member-card be">
+            <h4>THÀNH VIÊN 2: BACK-END, CSDL, AI & DEVOPS</h4>
+            <ul>
+                <li><strong>CSDL & API RESTful:</strong> Schema DB chuẩn; Hash Bcrypt; Phân quyền xem/sửa/xóa note.</li>
+                <li><strong>Mail Service:</strong> Tích hợp SMTP gửi email kích hoạt tài khoản & mã OTP/link reset mật khẩu.</li>
+                <li><strong>WebSocket Server:</strong> Socket.io server xử lý room collaboration và broadcast thay đổi.</li>
+                <li><strong>AI & Triển khai:</strong> Tích hợp LLM (Gemini API) Summary/Q&A có trích dẫn; Docker Compose / Deploy HTTPS.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="section-title">2. PHÂN CÔNG CHI TIẾT - PHẦN 1: QUẢN LÝ TÀI KHOẢN (2.0 ĐIỂM)</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 5%;" class="text-center">ID</th>
+                <th style="width: 25%;">Tiêu chí (Rubric)</th>
+                <th style="width: 7%;" class="text-center">Điểm</th>
+                <th style="width: 13%;" class="text-center">Phụ trách</th>
+                <th style="width: 50%;">Nhiệm vụ kỹ thuật & Yêu cầu chi tiết</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="text-center"><strong>1</strong></td>
+                <td>User registration</td>
+                <td class="text-center">0.25</td>
+                <td class="text-center"><span class="tag tag-be">BE chính</span><br><span class="tag tag-fe">FE phối hợp</span></td>
+                <td><strong>BE:</strong> Lưu pass băm bcrypt, tự động đăng nhập ngay sau đăng ký thành công, gửi link kích hoạt qua email.<br><strong>FE:</strong> Form đăng ký (email, display name, password x2), validate regex và lỗi trùng email.</td>
+            </tr>
+            <tr>
+                <td class="text-center"><strong>2</strong></td>
+                <td>Account activation</td>
+                <td class="text-center">0.25</td>
+                <td class="text-center"><span class="tag tag-both">Cả 2 phối hợp</span></td>
+                <td><strong>BE:</strong> Tạo token xác thực, endpoint kích hoạt tài khoản khi click link email.<br><strong>FE:</strong> Hiển thị banner nổi bật báo tài khoản chưa kích hoạt; banner tự biến mất khi click link xác thực.</td>
+            </tr>
+            <tr>
+                <td class="text-center"><strong>3</strong></td>
+                <td>User login and logout</td>
+                <td class="text-center">0.25</td>
+                <td class="text-center"><span class="tag tag-both">Cả 2 phối hợp</span></td>
+                <td><strong>BE:</strong> Cấp JWT/Session an toàn, endpoint đăng xuất hủy token.<br><strong>FE:</strong> Form đăng nhập, tự động chuyển về trang cá nhân sau login, chặn truy cập khi chưa login.</td>
+            </tr>
+            <tr>
+                <td class="text-center"><strong>4</strong></td>
+                <td>Password reset</td>
+                <td class="text-center">0.25</td>
+                <td class="text-center"><span class="tag tag-be">BE chính</span><br><span class="tag tag-fe">FE phối hợp</span></td>
+                <td><strong>BE:</strong> Gửi email chứa link hoặc OTP xác nhận, xác thực OTP, cập nhật pass mới.<br><strong>FE:</strong> Màn hình yêu cầu email -> nhập OTP/link -> nhập pass mới. Bắt login thủ công sau reset.</td>
+            </tr>
+            <tr>
+                <td class="text-center"><strong>5</strong></td>
+                <td>View profile and avatar</td>
+                <td class="text-center">0.25</td>
+                <td class="text-center"><span class="tag tag-fe">FE chính</span></td>
+                <td>Hiển thị display name, email, ảnh avatar. <strong>Lưu ý:</strong> Phải hiển thị avatar mặc định phù hợp khi user chưa upload avatar cá nhân.</td>
+            </tr>
+            <tr>
+                <td class="text-center"><strong>6</strong></td>
+                <td>Edit profile and avatar</td>
+                <td class="text-center">0.25</td>
+                <td class="text-center"><span class="tag tag-both">Cả 2 phối hợp</span></td>
+                <td><strong>BE:</strong> API cập nhật display name, kiểm tra định dạng/dung lượng file ảnh avatar upload.<br><strong>FE:</strong> Cho phép đổi tên và chọn ảnh mới, hiển thị preview ảnh tức thì trước khi lưu.</td>
+            </tr>
+            <tr>
+                <td class="text-center"><strong>7</strong></td>
+                <td>Change password</td>
+                <td class="text-center">0.25</td>
+                <td class="text-center"><span class="tag tag-both">Cả 2 phối hợp</span></td>
+                <td><strong>BE:</strong> Kiểm tra mật khẩu hiện tại, băm và lưu mật khẩu mới, xử lý session an toàn.<br><strong>FE:</strong> Form nhập mật khẩu cũ + nhập mật khẩu mới 2 lần để xác nhận chính xác.</td>
+            </tr>
+            <tr>
+                <td class="text-center"><strong>8</strong></td>
+                <td>User preferences</td>
+                <td class="text-center">0.25</td>
+                <td class="text-center"><span class="tag tag-fe">FE chính</span><br><span class="tag tag-be">BE phối hợp</span></td>
+                <td>Cho phép người dùng tùy chỉnh: kích thước font chữ ghi chú, bảng màu ghi chú, và bật/tắt chế độ Giao diện Sáng/Tối (Light/Dark theme). Lưu vào Database/LocalStorage.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- ==================== TRANG 2 ==================== -->
+    <div class="page-break"></div>
+
+    <div class="section-title">3. PHÂN CÔNG CHI TIẾT - PHẦN 2: QUẢN LÝ GHI CHÚ CƠ BẢN (3.5 ĐIỂM)</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 5%;" class="text-center">ID</th>
+                <th style="width: 25%;">Tiêu chí (Rubric)</th>
+                <th style="width: 7%;" class="text-center">Điểm</th>
+                <th style="width: 13%;" class="text-center">Phụ trách</th>
+                <th style="width: 50%;">Nhiệm vụ kỹ thuật & Yêu cầu chi tiết</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="text-center"><strong>9</strong></td>
+                <td>Display notes in listview</td>
+                <td class="text-center">0.25</td>
+                <td class="text-center"><span class="tag tag-fe">FE chính</span></td>
+                <td>Hiển thị danh sách ghi chú theo dạng dòng ngang (List view), căn chỉnh thông tin ngay ngắn.</td>
+            </tr>
+            <tr>
+                <td class="text-center"><strong>10</strong></td>
+                <td>Display notes in gridview</td>
+                <td class="text-center">0.25</td>
+                <td class="text-center"><span class="tag tag-fe">FE chính</span></td>
+                <td>Hiển thị ghi chú dạng lưới thẻ (Grid/Masonry view) mặc định. Nút chuyển đổi List/Grid mượt mà.</td>
+            </tr>
+            <tr>
+                <td class="text-center"><strong>11</strong></td>
+                <td>Create notes</td>
+                <td class="text-center">0.25</td>
+                <td class="text-center"><span class="tag tag-both">Cả 2 phối hợp</span></td>
+                <td><strong>Quy định đỏ:</strong> Chỉ có Tiêu đề & Nội dung là bắt buộc nhập. <strong>Bắt buộc dùng chung 1 màn hình với sửa note!</strong></td>
+            </tr>
+            <tr>
+                <td class="text-center"><strong>12</strong></td>
+                <td>Update notes</td>
+                <td class="text-center">0.25</td>
+                <td class="text-center"><span class="tag tag-both">Cả 2 phối hợp</span></td>
+                <td>Sửa tiêu đề, nội dung, nhãn, đính kèm. <strong>Cùng 1 giao diện với tạo note</strong>, load dữ liệu cũ lên form.</td>
+            </tr>
+            <tr>
+                <td class="text-center"><strong>13</strong></td>
+                <td>Delete notes</td>
+                <td class="text-center">0.25</td>
+                <td class="text-center"><span class="tag tag-both">Cả 2 phối hợp</span></td>
+                <td><strong>Quy định đỏ:</strong> Bắt buộc luôn hiển thị popup xác nhận (Confirmation Dialog) trước khi xóa.</td>
+            </tr>
+            <tr>
+                <td class="text-center"><strong>14</strong></td>
+                <td>Auto-save notes</td>
+                <td class="text-center">0.25</td>
+                <td class="text-center"><span class="tag tag-fe">FE chính</span><br><span class="tag tag-be">BE phối hợp</span></td>
+                <td><strong>Quy định đỏ:</strong> Tự động lưu nội dung khi gõ (debounce 300-500ms). <strong>Tuyệt đối không có nút Save!</strong></td>
+            </tr>
+            <tr>
+                <td class="text-center"><strong>15</strong></td>
+                <td>Attach images/video to notes</td>
+                <td class="text-center">0.25</td>
+                <td class="text-center"><span class="tag tag-both">Cả 2 phối hợp</span></td>
+                <td>Hỗ trợ đính kèm 1 hoặc nhiều ảnh, video. BE xử lý upload & lưu trữ; FE hiển thị preview & player.</td>
+            </tr>
+            <tr>
+                <td class="text-center"><strong>16</strong></td>
+                <td>Attach files to notes</td>
+                <td class="text-center">0.25</td>
+                <td class="text-center"><span class="tag tag-both">Cả 2 phối hợp</span></td>
+                <td>Đính kèm các loại tệp tài liệu (PDF, Word, TXT, ZIP...). Cho phép tải về và mở file dễ dàng.</td>
+            </tr>
+            <tr>
+                <td class="text-center"><strong>17</strong></td>
+                <td>Pin notes to top</td>
+                <td class="text-center">0.25</td>
+                <td class="text-center"><span class="tag tag-be">BE chính</span><br><span class="tag tag-fe">FE phối hợp</span></td>
+                <td>Note được ghim luôn nằm trên cùng. Nếu nhiều note ghim thì sắp xếp theo thời gian được ghim (pinned_at).</td>
+            </tr>
+            <tr>
+                <td class="text-center"><strong>18</strong></td>
+                <td>Special-note status indicators</td>
+                <td class="text-center">0.25</td>
+                <td class="text-center"><span class="tag tag-fe">FE chính</span></td>
+                <td>Hiển thị icon nhận diện rõ ràng trên thẻ note (cả List và Grid): Ghim (📌), Khóa (🔒), Được chia sẻ (👥).</td>
+            </tr>
+            <tr>
+                <td class="text-center"><strong>19</strong></td>
+                <td>Search notes (Live search)</td>
+                <td class="text-center">0.25</td>
+                <td class="text-center"><span class="tag tag-both">Cả 2 phối hợp</span></td>
+                <td><strong>Quy định đỏ:</strong> Tìm trong cả tiêu đề và nội dung. <strong>Không có nút Search</strong>, kích hoạt ngay khi gõ (delay 300ms).</td>
+            </tr>
+            <tr>
+                <td class="text-center"><strong>20</strong></td>
+                <td>Label management (CRUD)</td>
+                <td class="text-center">0.25</td>
+                <td class="text-center"><span class="tag tag-be">BE chính</span><br><span class="tag tag-fe">FE phối hợp</span></td>
+                <td>Quản lý danh sách nhãn: Thêm, Đổi tên, Xóa nhãn. <strong>Lưu ý:</strong> Xóa nhãn không mất note; Đổi tên nhãn thì mọi note liên quan tự động cập nhật tên mới.</td>
+            </tr>
+            <tr>
+                <td class="text-center"><strong>21</strong></td>
+                <td>Attach labels to notes</td>
+                <td class="text-center">0.25</td>
+                <td class="text-center"><span class="tag tag-both">Cả 2 phối hợp</span></td>
+                <td>Một ghi chú có thể không có nhãn hoặc gắn 1 hay nhiều nhãn. Giao diện gắn/bỏ nhãn nhanh gọn.</td>
+            </tr>
+            <tr>
+                <td class="text-center"><strong>22</strong></td>
+                <td>Filter notes based on labels</td>
+                <td class="text-center">0.25</td>
+                <td class="text-center"><span class="tag tag-both">Cả 2 phối hợp</span></td>
+                <td>Menu danh sách nhãn (thường ở sidebar); khi click vào nhãn nào thì chỉ hiển thị các note thuộc nhãn đó.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="alert-box">
+        💡 <strong>Điểm nhấn kỹ thuật Phần 2:</strong> Bộ lọc nhãn và Live Search cần hoạt động kết hợp mượt mà. Khi gõ từ khóa tìm kiếm trong một nhãn đang chọn, hệ thống chỉ tìm kiếm các ghi chú thuộc nhãn đó.
+    </div>
+
+    <!-- ==================== TRANG 3 ==================== -->
+    <div class="page-break"></div>
+
+    <div class="section-title">4. PHÂN CÔNG CHI TIẾT - PHẦN 3 & 4: NÂNG CAO, AI, PWA & DEVOPS (4.5 ĐIỂM)</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 5%;" class="text-center">ID</th>
+                <th style="width: 25%;">Tiêu chí (Rubric)</th>
+                <th style="width: 7%;" class="text-center">Điểm</th>
+                <th style="width: 13%;" class="text-center">Phụ trách</th>
+                <th style="width: 50%;">Nhiệm vụ kỹ thuật & Yêu cầu chi tiết</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="text-center"><strong>23</strong></td>
+                <td>Enable / disable password</td>
+                <td class="text-center">0.50</td>
+                <td class="text-center"><span class="tag tag-be">BE chính</span><br><span class="tag tag-fe">FE phối hợp</span></td>
+                <td>Mỗi note có password riêng biệt. Bật khóa: nhập pass 2 lần để chống gõ sai. Tắt khóa: bắt buộc nhập lại đúng password hiện tại để xác nhận hủy bảo vệ.</td>
+            </tr>
+            <tr>
+                <td class="text-center"><strong>24</strong></td>
+                <td>Password protection & change</td>
+                <td class="text-center">0.50</td>
+                <td class="text-center"><span class="tag tag-both">Cả 2 phối hợp</span></td>
+                <td>Note bị khóa: bắt prompt nhập pass trước khi xem/sửa/xóa. Đổi pass: phải nhập pass cũ + nhập pass mới 2 lần. BE mã hóa bảo vệ nội dung.</td>
+            </tr>
+            <tr>
+                <td class="text-center"><strong>25</strong></td>
+                <td>Share and receive notes</td>
+                <td class="text-center">0.50</td>
+                <td class="text-center"><span class="tag tag-be">BE chính</span><br><span class="tag tag-fe">FE phối hợp</span></td>
+                <td>Chia sẻ qua email người nhận (validate tài khoản tồn tại), gửi mail thông báo. Phân quyền Chỉ xem (Read-only) hoặc Chỉnh sửa (Edit). Mục riêng "Shared with me" hiển thị ai chia sẻ, ngày chia sẻ, quyền hạn. Chủ note có thể thu hồi/đổi quyền.</td>
+            </tr>
+            <tr>
+                <td class="text-center"><strong>26</strong></td>
+                <td>Collaboration & realtime modification</td>
+                <td class="text-center">0.50</td>
+                <td class="text-center"><span class="tag tag-be">BE (Socket)</span><br><span class="tag tag-fe">FE (Editor)</span></td>
+                <td>Áp dụng WebSocket (Socket.io) cho các note có quyền Edit. Khi nhiều người cùng mở và sửa 1 note, mọi thay đổi được phản ánh tức thì trên màn hình của nhau.</td>
+            </tr>
+            <tr>
+                <td class="text-center"><strong>27</strong></td>
+                <td>AI Summary</td>
+                <td class="text-center">0.25</td>
+                <td class="text-center"><span class="tag tag-be">BE chính</span><br><span class="tag tag-fe">FE phối hợp</span></td>
+                <td>Tích hợp LLM (Gemini API / OpenAI API) để tóm tắt nội dung 1 note ngắn gọn, chính xác. Có nút "Tạo lại tóm tắt" (Regenerate summary) theo ý muốn.</td>
+            </tr>
+            <tr>
+                <td class="text-center"><strong>28</strong></td>
+                <td>AI Question & Answer</td>
+                <td class="text-center">0.25</td>
+                <td class="text-center"><span class="tag tag-be">BE chính</span><br><span class="tag tag-fe">FE phối hợp</span></td>
+                <td>Hỏi đáp tự nhiên về toàn bộ ghi chú của user. Hệ thống truy vấn các note liên quan và tổng hợp câu trả lời; <strong>bắt buộc hiển thị link trích dẫn note để click mở trực tiếp</strong>.</td>
+            </tr>
+            <tr>
+                <td class="text-center"><strong>29</strong></td>
+                <td>UI and UX (Design & Feedback)</td>
+                <td class="text-center">0.50</td>
+                <td class="text-center"><span class="tag tag-fe">FE chính</span></td>
+                <td>Giao diện đẹp mắt, thẩm mỹ cao, chuyển động mượt mà, đầy đủ trạng thái Empty State, Loading skeleton, Toast báo lỗi/thành công trực quan.</td>
+            </tr>
+            <tr>
+                <td class="text-center"><strong>30</strong></td>
+                <td>Responsive Design</td>
+                <td class="text-center">0.50</td>
+                <td class="text-center"><span class="tag tag-fe">FE chính</span></td>
+                <td>Tương thích và tối ưu không gian hiển thị hoàn hảo trên cả 3 loại thiết bị: Smartphone (Mobile), Máy tính bảng (Tablet), và Màn hình máy tính (Desktop).</td>
+            </tr>
+            <tr>
+                <td class="text-center"><strong>31</strong></td>
+                <td>Offline Capabilities (PWA)</td>
+                <td class="text-center">0.50</td>
+                <td class="text-center"><span class="tag tag-fe">FE chính</span><br><span class="tag tag-be">BE hỗ trợ</span></td>
+                <td>Ứng dụng PWA: Service Worker cache static assets; sử dụng IndexedDB lưu trữ ghi chú tại client; tự động đồng bộ (sync) với MySQL/API khi có internet trở lại.</td>
+            </tr>
+            <tr>
+                <td class="text-center"><strong>32</strong></td>
+                <td>Online deployment / Docker</td>
+                <td class="text-center">0.50</td>
+                <td class="text-center"><span class="tag tag-be">BE chính</span></td>
+                <td>Triển khai online công khai có domain & HTTPS (Render, Vercel, Railway, VPS) HOẶC viết file <code>docker-compose.yml</code> chạy toàn bộ hệ thống bằng 1 lệnh.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="section-title">5. CHECKLIST ĐÓNG GÓI HỒ SƠ NỘP BÀI (MỤC VII - OUTPUT REQUIREMENTS)</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 22%;">Tệp tin / Thành phần</th>
+                <th style="width: 58%;">Quy cách kỹ thuật bắt buộc</th>
+                <th style="width: 20%;" class="text-center">Người phụ trách</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>1. Rubric.xlsx</strong></td>
+                <td>File Excel tự đánh giá đủ 32 tiêu chí (do GV phát), kèm link web public và tài khoản/mật khẩu test.</td>
+                <td class="text-center"><span class="tag tag-both">Cả 2 cùng điền</span></td>
+            </tr>
+            <tr>
+                <td><strong>2. Readme.txt</strong></td>
+                <td>Hướng dẫn cách build và chạy app, thông tin đăng nhập, danh sách tài khoản có sẵn dữ liệu mẫu.</td>
+                <td class="text-center"><span class="tag tag-be">Thành viên 2 (BE)</span></td>
+            </tr>
+            <tr>
+                <td><strong>3. demo.mp4</strong></td>
+                <td>Video tối thiểu 1080p, có mặt và giọng nói của <strong>cả 2 thành viên</strong>, demo lần lượt 32 tiêu chí.</td>
+                <td class="text-center"><span class="tag tag-both">Cả 2 cùng quay</span></td>
+            </tr>
+            <tr>
+                <td><strong>4. Thư mục source</strong></td>
+                <td>Toàn bộ mã nguồn đã dọn dẹp (clean cache, vendor). <strong>BẮT BUỘC giữ lại thư mục ẩn .git</strong>.</td>
+                <td class="text-center"><span class="tag tag-both">Cả 2 cùng chốt</span></td>
+            </tr>
+            <tr>
+                <td><strong>5. Screenshot.png</strong></td>
+                <td>Ảnh chụp biểu đồ đóng góp của các thành viên từ tab <strong>GitHub Insights</strong>.</td>
+                <td class="text-center"><span class="tag tag-be">Thành viên 2 (BE)</span></td>
+            </tr>
+            <tr>
+                <td><strong>File nén tổng thể</strong></td>
+                <td>Tạo thư mục <code>id1_fullname1_id2_fullname2</code> nén thành <code>id1_fullname1_id2_fullname2.zip</code>. Nộp Elearning.</td>
+                <td class="text-center"><span class="tag tag-both">Đại diện nhóm</span></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- ==================== TRANG 4 ==================== -->
+    <div class="page-break"></div>
+
+    <div class="section-title red">6. KẾ HOẠCH NƯỚC RÚT 4 NGÀY (DEADLINE: 11:59 THỨ HAI 02/11/2026)</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 14%;">Khung thời gian</th>
+                <th style="width: 43%;">Thành viên 1 (Front-end, UI/UX, PWA)</th>
+                <th style="width: 43%;">Thành viên 2 (Back-end, CSDL, AI, DevOps)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Thứ Sáu (30/10)<br><small>Hôm nay</small></strong></td>
+                <td>
+                    &bull; Khởi tạo UI (React/Vite/Tailwind), Router, Auth screens.<br>
+                    &bull; Màn hình chính Note: Grid/List switch, Live search (300ms).<br>
+                    &bull; Modal Tạo/Sửa note dùng chung; Cài đặt Auto-save (debounce).
+                </td>
+                <td>
+                    &bull; Khởi tạo DB Schema (Users, Notes, Labels, Attachments).<br>
+                    &bull; API Auth: Register (bcrypt, auto-login), Login, Logout.<br>
+                    &bull; SMTP gửi mail kích hoạt & OTP quên mật khẩu.<br>
+                    &bull; API CRUD Note, Live search & Quản lý Nhãn (Labels).
+                </td>
+            </tr>
+            <tr>
+                <td><strong>Thứ Bảy (31/10)<br><small>Ngày mai</small></strong></td>
+                <td>
+                    &bull; Giao diện Khóa mật khẩu note (prompt nhập pass xem/sửa/xóa).<br>
+                    &bull; Giao diện Chia sẻ note & Khu vực "Shared with me".<br>
+                    &bull; Client WebSocket Editor đồng bộ realtime nhiều người.<br>
+                    &bull; UI Tóm tắt AI (Summary button) và Box chat AI Q&A.
+                </td>
+                <td>
+                    &bull; API Khóa mật khẩu riêng cho từng note (băm pass, verify).<br>
+                    &bull; API Chia sẻ note, phân quyền Read/Edit, gửi mail thông báo.<br>
+                    &bull; Xây dựng Socket.io server xử lý room realtime edit.<br>
+                    &bull; Tích hợp Gemini API: AI Tóm tắt note & AI Hỏi đáp có trích dẫn.
+                </td>
+            </tr>
+            <tr>
+                <td><strong>Chủ Nhật (01/11)<br><small>Hoàn thiện</small></strong></td>
+                <td>
+                    &bull; Cài đặt PWA: Service Worker cache & IndexedDB (Offline 0.5đ).<br>
+                    &bull; Tối ưu Responsive chuẩn trên Mobile, Tablet, PC (0.5đ).<br>
+                    &bull; Tinh chỉnh hiệu ứng UI/UX, Loading skeleton, Toast (0.5đ).<br>
+                    &bull; Test chéo API cùng BE trên toàn bộ 32 tiêu chí.
+                </td>
+                <td>
+                    &bull; Hoàn thiện Docker Compose hoặc Deploy public có HTTPS (0.5đ).<br>
+                    &bull; Seed sẵn dữ liệu mẫu (các ghi chú, tài khoản demo).<br>
+                    &bull; Viết file <code>Readme.txt</code> hướng dẫn chạy project chi tiết.<br>
+                    &bull; Rà soát bảo mật API, CORS, validate dữ liệu đầu vào.
+                </td>
+            </tr>
+            <tr>
+                <td><strong>Thứ Hai (02/11)<br><span class="text-danger">DEADLINE 11:59</span></strong></td>
+                <td colspan="2">
+                    <strong>BUỔI SÁNG (07:30 - 10:30): CẢ 2 CÙNG QUAY VIDEO & ĐÓNG GÓI HỒ SƠ:</strong><br>
+                    1. Quay video <code>demo.mp4</code> (1080p, có mặt và giọng nói cả 2), demo lần lượt từ tiêu chí 1 đến 32.<br>
+                    2. Chụp ảnh <code>Screenshot.png</code> từ GitHub Insights thể hiện biểu đồ đóng góp của cả hai.<br>
+                    3. Dọn dẹp source (xóa node_modules/vendor/cache tạm), <strong>kiểm tra thư mục ẩn .git còn nguyên</strong>.<br>
+                    4. Điền file <code>Rubric.xlsx</code>, nén thư mục <code>id1_fullname1_id2_fullname2.zip</code> và nộp Elearning trước 11:59!
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="section-title">7. BỘ CÂU HỎI TRỌNG TÂM ÔN TẬP VẤN ĐÁP CÁ NHÂN (ORAL EXAM)</div>
+    <div style="display: flex; gap: 8px;">
+        <div style="flex: 1;">
+            <div class="qa-card">
+                <strong>FE Q1: Làm thế nào để triển khai Auto-save mà không gây nghẽn mạng?</strong><br>
+                <em>Trả lời:</em> Dùng kỹ thuật Debounce (300-500ms). Mỗi khi người dùng gõ phím, reset timer. Chỉ khi dừng gõ đủ thời gian định sẵn mới gửi request PUT/PATCH ngầm về server.
+            </div>
+            <div class="qa-card">
+                <strong>FE Q2: Cơ chế PWA Offline hoạt động như thế nào?</strong><br>
+                <em>Trả lời:</em> Dùng Service Worker bắt sự kiện <code>fetch</code> để cache static assets (HTML/CSS/JS). Dùng IndexedDB lưu note ở client. Khi có mạng (sự kiện <code>online</code>), đồng bộ các thay đổi lên server.
+            </div>
+            <div class="qa-card">
+                <strong>FE Q3: Khi nhiều người cùng sửa note, FE xử lý WebSocket ra sao?</strong><br>
+                <em>Trả lời:</em> Client lắng nghe event socket từ server khi người khác gõ để cập nhật state editor, đồng thời phát event khi user chỉnh sửa nội dung kèm con trỏ chuột.
+            </div>
+        </div>
+        <div style="flex: 1;">
+            <div class="qa-card be-card">
+                <strong>BE Q1: Tại sao mỗi note lại có password riêng và lưu trữ như thế nào?</strong><br>
+                <em>Trả lời:</em> Mỗi note có cột <code>password</code> riêng trong bảng Notes được băm bằng bcrypt. Khi mở note, client gửi pass lên để verify; nếu đúng server mới trả về nội dung giải mã.
+            </div>
+            <div class="qa-card be-card">
+                <strong>BE Q2: AI Q&A hoạt động ra sao để trích dẫn đúng note tham chiếu?</strong><br>
+                <em>Trả lời:</em> BE lấy các note liên quan của user, đưa vào context prompt gửi cho Gemini API kèm chỉ thị: "Chỉ trả lời dựa trên context và liệt kê ID các note đã sử dụng", sau đó parse ID trả về client.
+            </div>
+            <div class="qa-card be-card">
+                <strong>BE Q3: Khi xóa một nhãn (Label), tại sao các ghi chú không bị xóa?</strong><br>
+                <em>Trả lời:</em> Thiết kế bảng trung gian <code>note_labels</code> (n-n). Khi xóa nhãn trong bảng <code>labels</code>, chỉ xóa các bản ghi liên kết trong <code>note_labels</code>, bảng <code>notes</code> hoàn toàn giữ nguyên.
+            </div>
+        </div>
+    </div>
+
+    <div class="danger-box" style="margin-top: 6px; margin-bottom: 0;">
+        <strong>⛔ CÁC MỨC TRỪ ĐIỂM NẶNG CẦN TRÁNH TUYỆT ĐỐI:</strong>
+        Nộp trễ 1 giây - 1 ngày: <strong>-1.0 điểm</strong> &bull; Không có hướng dẫn chạy chi tiết: <strong>-2.0 điểm</strong> &bull; Nộp nguyên source chưa dọn rác (node_modules/vendor): <strong>-0.5 điểm</strong> &bull; Thiếu tài khoản/mật khẩu demo hoặc sai tên file: <strong>-1.0 điểm</strong> &bull; Thiếu commit GitHub theo tuần: <strong>-0.5 điểm</strong> &bull; Thiếu video/rubric/source: <strong>0 ĐIỂM CẢ NHÓM</strong>.
+    </div>
+
+</body>
+</html>
