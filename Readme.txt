@@ -3,7 +3,7 @@
 BÁO CÁO HƯỚNG DẪN CHẠY ỨNG DỤNG ĐỒ ÁN CUỐI KỲ (README.TXT)
 Môn học: 503073 – Lập trình & Ứng dụng Web | Học kỳ I / 2026-2027
 Đề tài: Ứng dụng Quản lý Ghi chú (Note App)
-Người thực hiện: Thành viên 2 (Back-end, CSDL, AI & DevOps)
+Người thực hiện: Thành viên 2 (Back-end, CSDL & DevOps)
 ================================================================================
 
 I. TỔNG QUAN HỆ THỐNG VÀ CÔNG NGHỆ BACK-END

@@ -14,10 +14,9 @@
     "express",
     "socket.io",
     "sqlite",
-    "mysql",
-    "gemini-ai"
+    "mysql"
   ],
-  "author": "Thành viên 2 (Back-end, CSDL, AI & DevOps)",
+  "author": "Thành viên 2 (Back-end, CSDL & DevOps)",
   "license": "ISC",
   "dependencies": {
     "bcryptjs": "^2.4.3",
