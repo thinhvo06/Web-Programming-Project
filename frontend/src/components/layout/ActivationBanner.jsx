@@ -26,9 +26,9 @@ export function ActivationBanner() {
   return (
     <aside
       aria-label="Thông báo kích hoạt tài khoản"
-      className="bg-amber-50 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-900 text-amber-800 dark:text-amber-200 px-4 py-2 text-xs"
+      className="bg-amber-50 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-900 text-amber-800 dark:text-amber-200 px-4 py-2 text-xs shrink-0"
     >
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
+      <div className="w-full px-2 sm:px-4 flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
           <span>

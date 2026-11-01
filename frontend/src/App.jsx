@@ -60,14 +60,14 @@ export function App() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 transition-colors">
+    <div className="h-screen flex flex-col bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 overflow-hidden transition-colors">
       {/* 1. Banner tài khoản chưa kích hoạt (Tiêu chí 2) */}
       <ActivationBanner />
 
       {/* 2. Banner trạng thái ngoại tuyến PWA (Tiêu chí 31) */}
       <OfflineBanner />
 
-      {/* 3. Thanh điều hướng đầu trang (Navbar) */}
+      {/* 3. Thanh điều hướng đầu trang (Navbar sát mép, full-width) */}
       <Navbar
         onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         onOpenProfile={() => setIsProfileOpen(true)}
@@ -75,10 +75,10 @@ export function App() {
         onOpenPreferences={() => setIsPreferencesOpen(true)}
       />
 
-      {/* 4. Khung giao diện chính (Sidebar + Feed) */}
-      <div className="flex-1 flex max-w-7xl w-full mx-auto">
+      {/* 4. Khung giao diện chính (Sidebar sát mép trái, trải dài 100% xuống đáy) */}
+      <div className="flex-1 flex w-full overflow-hidden relative">
         <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-        <main className="flex-1 min-w-0">
+        <main className="flex-1 min-w-0 overflow-y-auto">
           <NotesFeed />
         </main>
       </div>

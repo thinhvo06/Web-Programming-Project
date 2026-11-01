@@ -39,8 +39,8 @@ export function Navbar({ onToggleSidebar, onOpenProfile, onOpenChangePassword, o
   }, []);
 
   return (
-    <header className="sticky top-0 z-30 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
-      <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-30 shrink-0 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
+      <div className="w-full px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
         {/* Logo & Menu Toggle */}
         <div className="flex items-center gap-3">
           <button
