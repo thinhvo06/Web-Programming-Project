@@ -72,8 +72,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT' || $_SERVER['REQUEST_METHOD'] === 'PATC
 
     $is_pinned = $note['is_pinned'];
     $pinned_at = $note['pinned_at'];
-    if ($is_owner && isset($input['is_pinned'])) {
-        $new_pin = !empty($input['is_pinned']) ? 1 : 0;
+    $pin_input = $input['is_pinned'] ?? ($input['isPinned'] ?? null);
+    if ($is_owner && $pin_input !== null) {
+        $new_pin = !empty($pin_input) ? 1 : 0;
         if ($new_pin != $note['is_pinned']) {
             $is_pinned = $new_pin;
             $pinned_at = $new_pin ? date('Y-m-d H:i:s') : null;
@@ -83,13 +84,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT' || $_SERVER['REQUEST_METHOD'] === 'PATC
     $update = $pdo->prepare("UPDATE notes SET title = ?, content = ?, color = ?, is_pinned = ?, pinned_at = ?, updated_at = NOW() WHERE id = ?");
     $update->execute([$title, $content, $color, $is_pinned, $pinned_at, $id]);
 
-    // Cập nhật nhãn nếu là owner
-    if ($is_owner && isset($input['label_ids']) && is_array($input['label_ids'])) {
+    // Cập nhật nhãn nếu là owner (hỗ trợ cả label_ids và labels tên dạng chuỗi)
+    $final_label_ids = null;
+    if (isset($input['label_ids']) && is_array($input['label_ids'])) {
+        $final_label_ids = $input['label_ids'];
+    } elseif (isset($input['labels']) && is_array($input['labels'])) {
+        $final_label_ids = [];
+        foreach ($input['labels'] as $lbl) {
+            if (is_numeric($lbl)) {
+                $final_label_ids[] = (int)$lbl;
+            } elseif (is_string($lbl) && trim($lbl) !== '') {
+                $lbl_name = trim($lbl);
+                $stmt_find = $pdo->prepare("SELECT id FROM labels WHERE user_id = ? AND name = ?");
+                $stmt_find->execute([$user['id'], $lbl_name]);
+                $lid = $stmt_find->fetchColumn();
+                if (!$lid) {
+                    $stmt_ins = $pdo->prepare("INSERT INTO labels (user_id, name) VALUES (?, ?)");
+                    $stmt_ins->execute([$user['id'], $lbl_name]);
+                    $lid = $pdo->lastInsertId();
+                }
+                $final_label_ids[] = (int)$lid;
+            }
+        }
+    }
+
+    if ($is_owner && $final_label_ids !== null) {
         $del = $pdo->prepare("DELETE FROM note_labels WHERE note_id = ?");
         $del->execute([$id]);
 
         $ins = $pdo->prepare("INSERT INTO note_labels (note_id, label_id) VALUES (?, ?)");
-        foreach ($input['label_ids'] as $lid) {
+        foreach ($final_label_ids as $lid) {
             $ins->execute([$id, (int)$lid]);
         }
     }

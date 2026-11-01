@@ -67,10 +67,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->execute([$user['id'], $title, $content, $is_pinned, $pinned_at, $color]);
     $note_id = $pdo->lastInsertId();
 
-    // Gắn nhãn nếu có
-    if (!empty($label_ids) && is_array($label_ids)) {
+    // Gắn nhãn nếu có (hỗ trợ cả label_ids và tên nhãn trong mảng labels)
+    $final_label_ids = $label_ids;
+    if (empty($final_label_ids) && !empty($input['labels']) && is_array($input['labels'])) {
+        foreach ($input['labels'] as $lbl) {
+            if (is_numeric($lbl)) {
+                $final_label_ids[] = (int)$lbl;
+            } elseif (is_string($lbl) && trim($lbl) !== '') {
+                $lbl_name = trim($lbl);
+                $stmt_find = $pdo->prepare("SELECT id FROM labels WHERE user_id = ? AND name = ?");
+                $stmt_find->execute([$user['id'], $lbl_name]);
+                $lid = $stmt_find->fetchColumn();
+                if (!$lid) {
+                    $stmt_ins = $pdo->prepare("INSERT INTO labels (user_id, name) VALUES (?, ?)");
+                    $stmt_ins->execute([$user['id'], $lbl_name]);
+                    $lid = $pdo->lastInsertId();
+                }
+                $final_label_ids[] = (int)$lid;
+            }
+        }
+    }
+
+    if (!empty($final_label_ids)) {
         $stmt_label = $pdo->prepare("INSERT INTO note_labels (note_id, label_id) VALUES (?, ?)");
-        foreach ($label_ids as $lid) {
+        foreach ($final_label_ids as $lid) {
             $stmt_label->execute([$note_id, (int)$lid]);
         }
     }

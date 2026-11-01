@@ -17,10 +17,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' || $_SERVER['REQUEST_METHOD'] === 'PUT') {
-    $display_name = trim($_POST['display_name'] ?? '');
+    $input_json = get_json_input();
+    $display_name = trim($_POST['display_name'] ?? ($input_json['display_name'] ?? ''));
     $avatar_url = $user['avatar_url'];
 
-    // Xử lý upload avatar nếu có
+    // 1. Xử lý upload avatar từ $_FILES nếu có
     if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
         $file = $_FILES['avatar'];
         $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -47,6 +48,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || $_SERVER['REQUEST_METHOD'] === 'PUT
 
         if (move_uploaded_file($file['tmp_name'], $target_path)) {
             $avatar_url = '/uploads/avatars/' . $filename;
+        }
+    }
+    // 2. Xử lý nếu avatar gửi dạng Base64 Data URL
+    else {
+        $raw_avatar = $_POST['avatar'] ?? ($input_json['avatar'] ?? '');
+        if (!empty($raw_avatar) && strpos($raw_avatar, 'data:image/') === 0) {
+            if (preg_match('/^data:image\/(\w+);base64,/', $raw_avatar, $type_matches)) {
+                $ext = strtolower($type_matches[1]);
+                if (in_array($ext, ['jpeg', 'jpg', 'png', 'gif', 'webp'])) {
+                    $b64_data = substr($raw_avatar, strpos($raw_avatar, ',') + 1);
+                    $decoded = base64_decode($b64_data);
+                    if ($decoded !== false && strlen($decoded) <= 5 * 1024 * 1024) {
+                        $filename = 'avatar-' . $user['id'] . '-' . time() . '-' . rand(1000, 9999) . '.' . ($ext === 'jpeg' ? 'jpg' : $ext);
+                        $target_dir = __DIR__ . '/../../uploads/avatars';
+                        if (!is_dir($target_dir)) {
+                            @mkdir($target_dir, 0777, true);
+                        }
+                        if (file_put_contents($target_dir . '/' . $filename, $decoded)) {
+                            $avatar_url = '/uploads/avatars/' . $filename;
+                        }
+                    }
+                }
+            }
         }
     }
 

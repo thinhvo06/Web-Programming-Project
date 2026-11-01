@@ -276,13 +276,23 @@ export function NoteEditorModal() {
   };
 
   const handleClose = () => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
     if (editingNote?.isNew && !title.trim() && !content.trim()) {
       closeEditor();
       return;
     }
-    if (!title.trim() && !content.trim()) {
-      setValidationError('Vui lòng nhập tiêu đề hoặc nội dung');
-      return;
+    if (title.trim() || content.trim()) {
+      saveNoteAuto({
+        ...editingNote,
+        title,
+        content,
+        color,
+        isPinned,
+        labels: noteLabels,
+        attachments
+      });
     }
     closeEditor();
   };

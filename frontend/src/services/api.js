@@ -129,18 +129,24 @@ export const api = {
   },
 
   // ================= 2. PROFILE & CÀI ĐẶT =================
-  async updateProfile(userId, { displayName, avatarFile }) {
+  async updateProfile(userId, { displayName, avatarFile, avatar }) {
     if (!USE_MOCK) {
       const formData = new FormData();
       formData.append('display_name', displayName);
-      if (avatarFile) formData.append('avatar', avatarFile);
+      if (avatarFile) {
+        formData.append('avatar', avatarFile);
+      } else if (avatar && avatar.startsWith('data:image/')) {
+        formData.append('avatar', avatar);
+      }
 
       const res = await fetch(`${API_BASE_URL}/users/profile`, {
-        method: 'PUT',
+        method: 'POST',
         headers: getAuthHeader(),
         body: formData
       });
-      return res.json();
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Cập nhật thông tin thất bại');
+      return data;
     }
     return { displayName };
   },
@@ -288,6 +294,29 @@ export const api = {
     return { success: true };
   },
 
+  async revokeShare(shareId) {
+    if (!USE_MOCK) {
+      const res = await fetch(`${API_BASE_URL}/shares/${shareId}`, {
+        method: 'DELETE',
+        headers: getAuthHeader()
+      });
+      return res.json();
+    }
+    return { success: true };
+  },
+
+  async revokeShareByEmail(noteId, email) {
+    if (!USE_MOCK) {
+      const res = await fetch(`${API_BASE_URL}/shares/notes/${noteId}/share`, {
+        method: 'DELETE',
+        headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      return res.json();
+    }
+    return { success: true };
+  },
+
   async getSharedWithMe() {
     if (!USE_MOCK) {
       const res = await fetch(`${API_BASE_URL}/shares/shared-with-me`, {
@@ -296,5 +325,51 @@ export const api = {
       return res.json();
     }
     return [];
+  },
+
+  // ================= 6. NHÃN (LABELS) =================
+  async getLabels() {
+    if (!USE_MOCK) {
+      const res = await fetch(`${API_BASE_URL}/labels`, {
+        headers: getAuthHeader()
+      });
+      return res.json();
+    }
+    return { labels: [] };
+  },
+
+  async createLabel(name) {
+    if (!USE_MOCK) {
+      const res = await fetch(`${API_BASE_URL}/labels`, {
+        method: 'POST',
+        headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+      });
+      return res.json();
+    }
+    return { label: { id: Date.now(), name } };
+  },
+
+  async renameLabel(id, name) {
+    if (!USE_MOCK) {
+      const res = await fetch(`${API_BASE_URL}/labels/${id}`, {
+        method: 'PUT',
+        headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+      });
+      return res.json();
+    }
+    return { label: { id, name } };
+  },
+
+  async deleteLabel(id) {
+    if (!USE_MOCK) {
+      const res = await fetch(`${API_BASE_URL}/labels/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeader()
+      });
+      return res.json();
+    }
+    return { success: true };
   }
 };

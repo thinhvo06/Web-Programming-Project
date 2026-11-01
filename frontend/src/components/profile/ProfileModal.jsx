@@ -10,6 +10,7 @@ export function ProfileModal({ isOpen, onClose }) {
 
   const [displayName, setDisplayName] = useState('');
   const [avatarPreview, setAvatarPreview] = useState('');
+  const [avatarFile, setAvatarFile] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -17,6 +18,7 @@ export function ProfileModal({ isOpen, onClose }) {
     if (user) {
       setDisplayName(user.displayName || '');
       setAvatarPreview(user.avatar || '');
+      setAvatarFile(null);
     }
   }, [user, isOpen]);
 
@@ -32,11 +34,12 @@ export function ProfileModal({ isOpen, onClose }) {
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      showError('Dung lượng ảnh tối đa 2MB');
+    if (file.size > 5 * 1024 * 1024) {
+      showError('Dung lượng ảnh tối đa 5MB');
       return;
     }
 
+    setAvatarFile(file);
     const reader = new FileReader();
     reader.onload = () => {
       setAvatarPreview(reader.result);
@@ -54,11 +57,11 @@ export function ProfileModal({ isOpen, onClose }) {
 
     setIsSaving(true);
     try {
-      await updateProfile({ displayName: trimmed, avatar: avatarPreview });
+      await updateProfile({ displayName: trimmed, avatar: avatarPreview, avatarFile });
       showSuccess('Cập nhật thông tin thành công');
       onClose();
     } catch (err) {
-      showError('Có lỗi xảy ra khi cập nhật hồ sơ');
+      showError(err.message || 'Có lỗi xảy ra khi cập nhật hồ sơ');
     } finally {
       setIsSaving(false);
     }

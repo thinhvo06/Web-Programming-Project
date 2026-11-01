@@ -9,12 +9,56 @@ import {
 } from '../services/indexedDB';
 import { useDebounce } from '../hooks/useDebounce';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
+import { useAuth } from './AuthContext';
+import { api } from '../services/api';
 import { joinNoteRoom, leaveNoteRoom, emitNoteChange, onNoteUpdated } from '../services/socket';
 
 const NoteContext = createContext(null);
 
+function formatBackendNote(n) {
+  const isLocked = Boolean(n.is_locked);
+  const isUnlocked = n.is_unlocked !== undefined ? Boolean(n.is_unlocked) : !isLocked;
+  return {
+    id: n.id,
+    title: n.title || '',
+    content: n.content || '',
+    color: n.color || 'default',
+    isPinned: Boolean(n.is_pinned),
+    pinnedAt: n.pinned_at || null,
+    isLocked: isLocked,
+    isUnlocked: isUnlocked,
+    password: null,
+    labels: Array.isArray(n.labels)
+      ? n.labels.map((l) => (typeof l === 'string' ? l : l.name))
+      : [],
+    attachments: (n.attachments || []).map((a) => ({
+      id: a.id,
+      name: a.original_name || a.file_name || 'tệp',
+      type: a.file_type || 'file',
+      size: a.file_size ? `${Math.round(a.file_size / 1024)} KB` : '10 KB',
+      url: a.file_path ? `http://localhost:8000${a.file_path}` : ''
+    })),
+    sharedWith: (n.shares || []).map((s) => ({
+      id: s.id,
+      email: s.recipient ? s.recipient.email : s.email,
+      permission: s.permission,
+      sharedAt: s.shared_at
+    })),
+    sharedBy: n.shared_info
+      ? {
+          name: n.shared_info.shared_by?.display_name || 'Người dùng',
+          email: n.shared_info.shared_by?.email || ''
+        }
+      : (n.user_role && n.user_role !== 'owner' ? { name: 'Người dùng', email: '' } : null),
+    userRole: n.user_role || (n.shared_info ? n.shared_info.permission : 'owner'),
+    createdAt: n.created_at || new Date().toISOString(),
+    updatedAt: n.updated_at || new Date().toISOString()
+  };
+}
+
 export function NoteProvider({ children }) {
   const isOnline = useOnlineStatus();
+  const { isAuthenticated } = useAuth();
 
   // State danh sách notes & labels
   const [notes, setNotes] = useState(() => {
@@ -69,27 +113,82 @@ export function NoteProvider({ children }) {
   // Modal quản lý nhãn (Tiêu chí 20)
   const [isLabelManagerOpen, setIsLabelManagerOpen] = useState(false);
 
-  // Khởi tạo và đồng bộ IndexedDB khi ứng dụng khởi động (Tiêu chí 31)
+  // 1. Nạp dữ liệu từ Backend PHP (MySQL) khi online và đã đăng nhập, fallback sang IndexedDB khi offline
   useEffect(() => {
-    async function syncFromIndexedDB() {
+    let isMounted = true;
+
+    async function loadData() {
+      if (isOnline && isAuthenticated) {
+        try {
+          const [notesRes, sharedRes, labelsRes] = await Promise.all([
+            api.getNotes(),
+            api.getSharedWithMe(),
+            api.getLabels()
+          ]);
+
+          if (isMounted) {
+            let backendNotes = [];
+            if (notesRes && notesRes.notes) {
+              backendNotes = notesRes.notes.map(formatBackendNote);
+            }
+
+            let sharedNotes = [];
+            if (sharedRes && sharedRes.notes) {
+              sharedNotes = sharedRes.notes.map(formatBackendNote);
+            }
+
+            const allNotesMap = new Map();
+            backendNotes.forEach((n) => allNotesMap.set(n.id, n));
+            sharedNotes.forEach((n) => allNotesMap.set(n.id, n));
+            const mergedNotes = Array.from(allNotesMap.values());
+
+            let backendLabels = [];
+            if (labelsRes && labelsRes.labels) {
+              backendLabels = labelsRes.labels.map((l) => ({ id: l.id, name: l.name }));
+            }
+
+            if (mergedNotes.length > 0) {
+              setNotes(mergedNotes);
+              idbBulkPut('notes', mergedNotes);
+            }
+            if (backendLabels.length > 0) {
+              setLabels(backendLabels);
+              idbBulkPut('labels', backendLabels);
+            }
+            return;
+          }
+        } catch (err) {
+          console.warn('Không thể nạp dữ liệu từ Backend PHP, chuyển sang IndexedDB/Cache:', err);
+        }
+      }
+
+      // Fallback sang IndexedDB khi offline hoặc API lỗi
       try {
         const idbNotes = await idbGetAll('notes');
         const idbLabels = await idbGetAll('labels');
-        if (idbNotes && idbNotes.length > 0) {
-          setNotes(idbNotes);
-        } else {
-          await idbBulkPut('notes', INITIAL_NOTES);
-          await idbBulkPut('labels', INITIAL_LABELS);
-        }
-        if (idbLabels && idbLabels.length > 0) {
-          setLabels(idbLabels);
+        if (isMounted) {
+          if (idbNotes && idbNotes.length > 0) {
+            setNotes(idbNotes);
+          } else {
+            setNotes(INITIAL_NOTES);
+          }
+          if (idbLabels && idbLabels.length > 0) {
+            setLabels(idbLabels);
+          } else {
+            setLabels(INITIAL_LABELS);
+          }
         }
       } catch (err) {
         console.warn('Lỗi đọc IndexedDB:', err);
       }
     }
-    syncFromIndexedDB();
-  }, []);
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated, isOnline]);
 
   // Lưu vào localStorage & IndexedDB mỗi khi notes thay đổi
   useEffect(() => {
@@ -114,7 +213,14 @@ export function NoteProvider({ children }) {
       if (data && data.noteId) {
         setNotes((prevNotes) =>
           prevNotes.map((n) =>
-            n.id === data.noteId ? { ...n, title: data.title ?? n.title, content: data.content ?? n.content, updatedAt: new Date().toISOString() } : n
+            n.id === data.noteId
+              ? {
+                  ...n,
+                  title: data.title ?? n.title,
+                  content: data.content ?? n.content,
+                  updatedAt: new Date().toISOString()
+                }
+              : n
           )
         );
       }
@@ -134,6 +240,7 @@ export function NoteProvider({ children }) {
       labels: activeFilter !== 'all' && activeFilter !== 'shared' ? [activeFilter] : [],
       password: null,
       isLocked: false,
+      isUnlocked: true,
       sharedWith: [],
       sharedBy: null,
       attachments: [],
@@ -170,6 +277,7 @@ export function NoteProvider({ children }) {
       isNew: false
     };
 
+    // 1. Cập nhật local state và IndexedDB ngay lập tức để giao diện mượt
     setNotes((prevNotes) => {
       const exists = prevNotes.some((n) => n.id === updatedNote.id);
       if (exists) {
@@ -188,10 +296,46 @@ export function NoteProvider({ children }) {
       console.error('Lỗi auto-save IndexedDB:', e);
     }
 
+    // 2. Đồng bộ lên Backend PHP (MySQL) khi online và đã đăng nhập
+    if (isOnline && isAuthenticated) {
+      try {
+        const isTempId = typeof updatedNote.id === 'string' && updatedNote.id.startsWith('note-');
+        if (isTempId || updatedData.isNew) {
+          const res = await api.createNote({
+            title: updatedNote.title || 'Ghi chú không tiêu đề',
+            content: updatedNote.content || '',
+            color: updatedNote.color || 'default',
+            is_pinned: updatedNote.isPinned,
+            labels: updatedNote.labels || []
+          });
+
+          if (res && res.success && res.note) {
+            const serverNote = formatBackendNote(res.note);
+            setNotes((prev) =>
+              prev.map((n) => (n.id === updatedNote.id ? serverNote : n))
+            );
+            await idbDelete('notes', updatedNote.id);
+            await idbPut('notes', serverNote);
+            setEditingNote((prev) => (prev && prev.id === updatedNote.id ? serverNote : prev));
+          }
+        } else {
+          await api.updateNote(updatedNote.id, {
+            title: updatedNote.title,
+            content: updatedNote.content,
+            color: updatedNote.color,
+            is_pinned: updatedNote.isPinned,
+            labels: updatedNote.labels
+          });
+        }
+      } catch (err) {
+        console.warn('Lỗi đồng bộ Backend PHP auto-save:', err);
+      }
+    }
+
     setTimeout(() => {
       setSaveStatus('saved');
     }, 400);
-  }, [isOnline]);
+  }, [isOnline, isAuthenticated]);
 
   // Tiêu chí 13: Xóa ghi chú (có popup xác nhận)
   const confirmDeleteNote = useCallback(async () => {
@@ -209,15 +353,27 @@ export function NoteProvider({ children }) {
       console.error('Lỗi xóa note khỏi IndexedDB:', e);
     }
 
+    if (isOnline && isAuthenticated) {
+      const isTempId = typeof targetId === 'string' && targetId.startsWith('note-');
+      if (!isTempId) {
+        try {
+          await api.deleteNote(targetId, noteToDelete.password);
+        } catch (err) {
+          console.warn('Lỗi xóa note trên Backend PHP:', err);
+        }
+      }
+    }
+
     if (editingNote && editingNote.id === targetId) {
       closeEditor();
     }
     setNoteToDelete(null);
-  }, [noteToDelete, editingNote, closeEditor, isOnline]);
+  }, [noteToDelete, editingNote, closeEditor, isOnline, isAuthenticated]);
 
   // Tiêu chí 17: Ghim note lên đầu
   const togglePinNote = useCallback(async (noteId, e) => {
     if (e) e.stopPropagation();
+
     setNotes((prev) =>
       prev.map((n) => {
         if (n.id === noteId) {
@@ -234,19 +390,42 @@ export function NoteProvider({ children }) {
         return n;
       })
     );
-  }, []);
+
+    if (isOnline && isAuthenticated) {
+      const isTempId = typeof noteId === 'string' && noteId.startsWith('note-');
+      if (!isTempId) {
+        try {
+          await api.togglePin(noteId);
+        } catch (err) {
+          console.warn('Lỗi togglePin qua API:', err);
+        }
+      }
+    }
+  }, [isOnline, isAuthenticated]);
 
   // Tiêu chí 20: CRUD Nhãn
-  const addLabel = useCallback((name) => {
+  const addLabel = useCallback(async (name) => {
     const trimmed = name.trim();
     if (!trimmed) return;
     if (labels.some((l) => l.name.toLowerCase() === trimmed.toLowerCase())) return;
 
-    const newLabel = { id: 'lbl-' + Date.now(), name: trimmed };
-    setLabels((prev) => [...prev, newLabel]);
-  }, [labels]);
+    let newLabel = { id: 'lbl-' + Date.now(), name: trimmed };
 
-  const renameLabel = useCallback((id, newName) => {
+    if (isOnline && isAuthenticated) {
+      try {
+        const res = await api.createLabel(trimmed);
+        if (res && res.success && res.label) {
+          newLabel = { id: res.label.id, name: res.label.name };
+        }
+      } catch (err) {
+        console.warn('Lỗi createLabel API:', err);
+      }
+    }
+
+    setLabels((prev) => [...prev, newLabel]);
+  }, [labels, isOnline, isAuthenticated]);
+
+  const renameLabel = useCallback(async (id, newName) => {
     const trimmed = newName.trim();
     if (!trimmed) return;
 
@@ -254,6 +433,17 @@ export function NoteProvider({ children }) {
     if (!oldLabel || oldLabel.name === trimmed) return;
 
     const oldName = oldLabel.name;
+
+    if (isOnline && isAuthenticated) {
+      const isTempId = typeof id === 'string' && id.startsWith('lbl-');
+      if (!isTempId) {
+        try {
+          await api.renameLabel(id, trimmed);
+        } catch (err) {
+          console.warn('Lỗi renameLabel API:', err);
+        }
+      }
+    }
 
     setLabels((prev) => prev.map((l) => (l.id === id ? { ...l, name: trimmed } : l)));
 
@@ -271,13 +461,24 @@ export function NoteProvider({ children }) {
     if (activeFilter === oldName) {
       setActiveFilter(trimmed);
     }
-  }, [labels, activeFilter]);
+  }, [labels, activeFilter, isOnline, isAuthenticated]);
 
-  const deleteLabel = useCallback((id) => {
+  const deleteLabel = useCallback(async (id) => {
     const labelToDelete = labels.find((l) => l.id === id);
     if (!labelToDelete) return;
 
     const labelName = labelToDelete.name;
+
+    if (isOnline && isAuthenticated) {
+      const isTempId = typeof id === 'string' && id.startsWith('lbl-');
+      if (!isTempId) {
+        try {
+          await api.deleteLabel(id);
+        } catch (err) {
+          console.warn('Lỗi deleteLabel API:', err);
+        }
+      }
+    }
 
     setLabels((prev) => prev.filter((l) => l.id !== id));
 
@@ -294,21 +495,43 @@ export function NoteProvider({ children }) {
     if (activeFilter === labelName) {
       setActiveFilter('all');
     }
-  }, [labels, activeFilter]);
+  }, [labels, activeFilter, isOnline, isAuthenticated]);
 
   // Tiêu chí 23 & 24: Khóa mật khẩu note
-  const unlockNoteWithPassword = useCallback((noteId, inputPassword) => {
-    const note = notes.find((n) => n.id === noteId);
-    if (!note) return false;
+  const unlockNoteWithPassword = useCallback(async (noteId, inputPassword) => {
+    if (isOnline && isAuthenticated) {
+      const isTempId = typeof noteId === 'string' && noteId.startsWith('note-');
+      if (!isTempId) {
+        try {
+          const res = await api.unlockNote(noteId, inputPassword);
+          if (res && res.success) {
+            setUnlockedNoteIds((prev) => new Set(prev).add(noteId));
+            if (res.note && res.note.content) {
+              setNotes((prev) =>
+                prev.map((n) =>
+                  n.id === noteId
+                    ? { ...n, content: res.note.content, isUnlocked: true }
+                    : n
+                )
+              );
+            }
+            return true;
+          }
+        } catch (err) {
+          console.warn('Lỗi unlockNote qua API:', err);
+        }
+      }
+    }
 
-    if (note.password === inputPassword) {
+    const note = notes.find((n) => n.id === noteId);
+    if (note && note.password === inputPassword) {
       setUnlockedNoteIds((prev) => new Set(prev).add(noteId));
       return true;
     }
     return false;
-  }, [notes]);
+  }, [notes, isOnline, isAuthenticated]);
 
-  const enableNotePassword = useCallback((noteId, newPassword) => {
+  const enableNotePassword = useCallback(async (noteId, newPassword) => {
     setNotes((prev) =>
       prev.map((n) => {
         if (n.id === noteId) {
@@ -316,6 +539,7 @@ export function NoteProvider({ children }) {
             ...n,
             password: newPassword,
             isLocked: true,
+            isUnlocked: true,
             updatedAt: new Date().toISOString()
           };
           idbPut('notes', updated);
@@ -325,38 +549,86 @@ export function NoteProvider({ children }) {
       })
     );
     setUnlockedNoteIds((prev) => new Set(prev).add(noteId));
-  }, []);
 
-  const disableNotePassword = useCallback((noteId, currentPassword) => {
-    const note = notes.find((n) => n.id === noteId);
-    if (!note || note.password !== currentPassword) {
-      return false;
-    }
-    setNotes((prev) =>
-      prev.map((n) => {
-        if (n.id === noteId) {
-          const updated = {
-            ...n,
-            password: null,
-            isLocked: false,
-            updatedAt: new Date().toISOString()
-          };
-          idbPut('notes', updated);
-          return updated;
+    if (isOnline && isAuthenticated) {
+      const isTempId = typeof noteId === 'string' && noteId.startsWith('note-');
+      if (!isTempId) {
+        try {
+          await api.lockNote(noteId, newPassword);
+        } catch (err) {
+          console.warn('Lỗi lockNote qua API:', err);
         }
-        return n;
-      })
-    );
-    setUnlockedNoteIds((prev) => {
-      const next = new Set(prev);
-      next.delete(noteId);
-      return next;
-    });
-    return true;
-  }, [notes]);
+      }
+    }
+  }, [isOnline, isAuthenticated]);
+
+  const disableNotePassword = useCallback(async (noteId, currentPassword) => {
+    let success = false;
+
+    if (isOnline && isAuthenticated) {
+      const isTempId = typeof noteId === 'string' && noteId.startsWith('note-');
+      if (!isTempId) {
+        try {
+          const res = await api.disableLock(noteId, currentPassword);
+          if (res && res.success) {
+            success = true;
+          }
+        } catch (err) {
+          console.warn('Lỗi disableLock qua API:', err);
+        }
+      }
+    }
+
+    const note = notes.find((n) => n.id === noteId);
+    if (!success && note && note.password === currentPassword) {
+      success = true;
+    }
+
+    if (success) {
+      setNotes((prev) =>
+        prev.map((n) => {
+          if (n.id === noteId) {
+            const updated = {
+              ...n,
+              password: null,
+              isLocked: false,
+              isUnlocked: true,
+              updatedAt: new Date().toISOString()
+            };
+            idbPut('notes', updated);
+            return updated;
+          }
+          return n;
+        })
+      );
+      setUnlockedNoteIds((prev) => {
+        const next = new Set(prev);
+        next.delete(noteId);
+        return next;
+      });
+      return true;
+    }
+    return false;
+  }, [notes, isOnline, isAuthenticated]);
 
   // Tiêu chí 25: Chia sẻ ghi chú
-  const shareNote = useCallback((noteId, recipientEmail, permission = 'read') => {
+  const shareNote = useCallback(async (noteId, recipientEmail, permission = 'read') => {
+    let serverShare = null;
+    if (isOnline && isAuthenticated) {
+      const isTempId = typeof noteId === 'string' && noteId.startsWith('note-');
+      if (!isTempId) {
+        try {
+          const res = await api.shareNote(noteId, recipientEmail, permission);
+          if (res && res.success) {
+            serverShare = res.share;
+          }
+        } catch (err) {
+          console.warn('Lỗi shareNote qua API:', err);
+          throw err;
+        }
+      }
+    }
+
     setNotes((prev) =>
       prev.map((n) => {
         if (n.id === noteId) {
@@ -368,7 +640,15 @@ export function NoteProvider({ children }) {
               s.email.toLowerCase() === recipientEmail.toLowerCase() ? { ...s, permission } : s
             );
           } else {
-            nextShares = [...currentShares, { email: recipientEmail, permission }];
+            nextShares = [
+              ...currentShares,
+              {
+                id: serverShare?.id || Date.now(),
+                email: recipientEmail,
+                permission,
+                sharedAt: new Date().toISOString()
+              }
+            ];
           }
           const updated = { ...n, sharedWith: nextShares, updatedAt: new Date().toISOString() };
           idbPut('notes', updated);
@@ -377,9 +657,20 @@ export function NoteProvider({ children }) {
         return n;
       })
     );
-  }, []);
+  }, [isOnline, isAuthenticated]);
 
-  const revokeShare = useCallback((noteId, recipientEmail) => {
+  const revokeShare = useCallback(async (noteId, recipientEmail) => {
+    if (isOnline && isAuthenticated) {
+      const isTempId = typeof noteId === 'string' && noteId.startsWith('note-');
+      if (!isTempId) {
+        try {
+          await api.revokeShareByEmail(noteId, recipientEmail);
+        } catch (err) {
+          console.warn('Lỗi revokeShare qua API:', err);
+        }
+      }
+    }
+
     setNotes((prev) =>
       prev.map((n) => {
         if (n.id === noteId) {
@@ -393,7 +684,7 @@ export function NoteProvider({ children }) {
         return n;
       })
     );
-  }, []);
+  }, [isOnline, isAuthenticated]);
 
   // LỌC VÀ TÌM KIẾM GHI CHÚ
   const filteredNotes = useMemo(() => {

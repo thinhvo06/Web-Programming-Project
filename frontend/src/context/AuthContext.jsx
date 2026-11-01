@@ -85,11 +85,15 @@ export function AuthProvider({ children }) {
   };
 
   // Tiêu chí 6: Cập nhật thông tin cá nhân và avatar
-  const updateProfile = async ({ displayName, avatar }) => {
+  const updateProfile = async ({ displayName, avatar, avatarFile }) => {
     if (!user) return;
-    const updated = { ...user, displayName, avatar: avatar !== undefined ? avatar : user.avatar };
+    const res = await api.updateProfile(user.id, { displayName, avatar, avatarFile });
+    const newName = res?.user?.display_name || displayName;
+    const newAvatar = res?.user?.avatar_url || avatar || user.avatar;
+    const updated = { ...user, displayName: newName, avatar: newAvatar };
     setUser(updated);
-    await api.updateProfile(user.id, { displayName, avatar });
+    localStorage.setItem('noteapp_user', JSON.stringify(updated));
+    return res;
   };
 
   // Tiêu chí 7: Đổi mật khẩu

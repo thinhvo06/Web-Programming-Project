@@ -9,7 +9,7 @@ if ($note_id <= 0) {
     json_response(400, false, 'ID ghi chú không hợp lệ.');
 }
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $_SERVER['REQUEST_METHOD'] !== 'DELETE') {
     json_response(405, false, 'Phương thức không được hỗ trợ.');
 }
 
@@ -24,10 +24,17 @@ if (!$note) {
 
 $input = get_json_input();
 $email = trim($input['email'] ?? '');
-$permission = ($input['permission'] === 'edit') ? 'edit' : 'read';
 
 if (empty($email)) {
     json_response(400, false, 'Vui lòng cung cấp địa chỉ email người nhận.');
+}
+
+// Xử lý DELETE: Thu hồi quyền chia sẻ theo email
+if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+    $stmt_del = $pdo->prepare("DELETE s FROM note_shares s JOIN users u ON s.shared_with_user_id = u.id WHERE s.note_id = ? AND u.email = ?");
+    $stmt_del->execute([$note_id, strtolower($email)]);
+    json_response(200, true, "Đã thu hồi quyền chia sẻ cho {$email} thành công!");
+}
 }
 
 // Kiểm tra tài khoản người nhận tồn tại
