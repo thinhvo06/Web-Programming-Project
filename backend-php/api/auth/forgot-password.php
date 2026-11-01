@@ -29,9 +29,14 @@ $expires_at = date('Y-m-d H:i:s', time() + 15 * 60); // 15 phút
 $update = $pdo->prepare("UPDATE users SET reset_password_otp = ?, reset_password_otp_expires_at = ?, reset_password_token = ? WHERE id = ?");
 $update->execute([$otp, $expires_at, $reset_token, $user['id']]);
 
-send_reset_password_mail($user['email'], $user['display_name'], $otp, $reset_token);
+$is_sent_real = send_reset_password_mail($user['email'], $user['display_name'], $otp, $reset_token);
 
-json_response(200, true, 'Mã OTP và liên kết đặt lại mật khẩu đã được gửi đến email của bạn.', [
+$message = $is_sent_real
+    ? "Mã OTP xác thực đã được gửi đến email {$user['email']} của bạn."
+    : "Mã OTP của bạn là: {$otp} (Đã lưu nhật ký tại backend-php/logs/mail_logs.txt)";
+
+json_response(200, true, $message, [
     'otp_preview' => $otp,
-    'reset_token_preview' => $reset_token
+    'reset_token_preview' => $reset_token,
+    'smtp_sent' => $is_sent_real
 ]);

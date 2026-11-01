@@ -18,3 +18,5 @@ backend/uploads/avatars/*
 !backend/uploads/avatars/.gitkeep
 backend/uploads/attachments/*
 !backend/uploads/attachments/.gitkeep
+backend-php/realtime-socket/node_modules/
+backend-php/logs/

@@ -92,6 +92,9 @@ export function AuthPage() {
     try {
       const res = await api.forgotPassword(resetEmail);
       showSuccess(res.message || 'Đã gửi mã OTP về email');
+      if (res.otp_preview) {
+        setOtp(res.otp_preview);
+      }
       setMode('forgot_otp');
     } catch (err) {
       setErrorMessage(err.message || 'Không tìm thấy tài khoản');

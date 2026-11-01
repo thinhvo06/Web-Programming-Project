@@ -11,7 +11,7 @@ $db_user = 'root';
 $db_pass = ''; // Mặc định trên XAMPP mật khẩu root là rỗng
 
 $jwt_secret = 'tdtu_web_programming_final_project_jwt_secret_key_2026';
-$base_url = 'http://localhost/tdtu_web_final_project/backend-php';
+$base_url = 'http://localhost:8000';
 $frontend_url = 'http://localhost:5173';
 
 try {
