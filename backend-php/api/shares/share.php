@@ -24,6 +24,7 @@ if (!$note) {
 
 $input = get_json_input();
 $email = trim($input['email'] ?? '');
+$permission = in_array($input['permission'] ?? '', ['read', 'edit']) ? $input['permission'] : 'read';
 
 if (empty($email)) {
     json_response(400, false, 'Vui lòng cung cấp địa chỉ email người nhận.');

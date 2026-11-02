@@ -662,6 +662,7 @@ export function NoteProvider({ children }) {
           }
           const updated = { ...n, sharedWith: nextShares, updatedAt: new Date().toISOString() };
           idbPut('notes', updated);
+          setNoteToShare((prev) => (prev && prev.id === noteId ? updated : prev));
           return updated;
         }
         return n;
@@ -689,6 +690,7 @@ export function NoteProvider({ children }) {
           );
           const updated = { ...n, sharedWith: nextShares, updatedAt: new Date().toISOString() };
           idbPut('notes', updated);
+          setNoteToShare((prev) => (prev && prev.id === noteId ? updated : prev));
           return updated;
         }
         return n;

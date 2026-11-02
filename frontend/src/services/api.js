@@ -291,7 +291,11 @@ export const api = {
         headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, permission })
       });
-      return res.json();
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || 'Không thể chia sẻ ghi chú');
+      }
+      return data;
     }
     return { success: true };
   },
@@ -314,7 +318,11 @@ export const api = {
         headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
       });
-      return res.json();
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || 'Không thể thu hồi quyền chia sẻ');
+      }
+      return data;
     }
     return { success: true };
   },
