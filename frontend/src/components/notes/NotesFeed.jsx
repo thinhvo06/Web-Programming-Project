@@ -2,6 +2,7 @@ import React from 'react';
 import { useNotes } from '../../context/NoteContext';
 import { NoteCard } from './NoteCard';
 import { NOTE_COLORS } from '../../services/mockData';
+import { CustomSelect } from '../common/CustomSelect';
 import {
   FileText,
   Search,
@@ -125,17 +126,19 @@ export function NotesFeed() {
           </div>
 
           {/* Sắp xếp */}
-          <div className="flex items-center gap-1">
-            <ArrowUpDown className="w-3.5 h-3.5 text-zinc-400" />
-            <select
+          <div className="flex items-center">
+            <CustomSelect
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="bg-transparent border border-zinc-200 dark:border-zinc-700 rounded px-1.5 py-0.5 text-xs text-zinc-700 dark:text-zinc-300 focus:outline-none"
-            >
-              <option value="updated">Mới cập nhật</option>
-              <option value="created">Mới tạo</option>
-              <option value="title">Tiêu đề (A-Z)</option>
-            </select>
+              onChange={setSortBy}
+              icon={<ArrowUpDown className="w-3.5 h-3.5 text-zinc-400" />}
+              options={[
+                { value: 'updated', label: 'Mới cập nhật' },
+                { value: 'created', label: 'Mới tạo' },
+                { value: 'title', label: 'Tiêu đề (A-Z)' },
+              ]}
+              align="right"
+              size="sm"
+            />
           </div>
         </div>
       </div>

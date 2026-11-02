@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNotes } from '../../context/NoteContext';
 import { useToast } from '../../context/ToastContext';
 import { Modal } from '../common/Modal';
+import { CustomSelect } from '../common/CustomSelect';
 import { Trash2, Loader2, Users } from 'lucide-react';
 
 export function NoteShareModal() {
@@ -84,15 +85,17 @@ export function NoteShareModal() {
               disabled={isSubmitting}
               className="flex-1 px-3 py-1.5 text-xs bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
             />
-            <select
+            <CustomSelect
               value={permission}
-              onChange={(e) => setPermission(e.target.value)}
+              onChange={setPermission}
               disabled={isSubmitting}
-              className="bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 focus:outline-none disabled:opacity-50"
-            >
-              <option value="read">Chỉ xem</option>
-              <option value="edit">Chỉnh sửa</option>
-            </select>
+              options={[
+                { value: 'read', label: 'Chỉ xem' },
+                { value: 'edit', label: 'Chỉnh sửa' },
+              ]}
+              size="md"
+              className="w-28"
+            />
             <button
               type="submit"
               disabled={isSubmitting}
@@ -141,14 +144,16 @@ export function NoteShareModal() {
                   </div>
 
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <select
+                    <CustomSelect
                       value={share.permission}
-                      onChange={(e) => handleChangePermission(share.email, e.target.value)}
-                      className="bg-white dark:bg-zinc-700 border border-zinc-300 dark:border-zinc-600 rounded px-1.5 py-0.5 text-xs text-zinc-700 dark:text-zinc-300"
-                    >
-                      <option value="read">Chỉ xem</option>
-                      <option value="edit">Chỉnh sửa</option>
-                    </select>
+                      onChange={(newPerm) => handleChangePermission(share.email, newPerm)}
+                      options={[
+                        { value: 'read', label: 'Chỉ xem' },
+                        { value: 'edit', label: 'Chỉnh sửa' },
+                      ]}
+                      size="xs"
+                      align="right"
+                    />
 
                     <button
                       onClick={() => handleRevoke(share.email)}
