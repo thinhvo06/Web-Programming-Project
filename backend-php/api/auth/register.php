@@ -10,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $input = get_json_input();
 $email = trim($input['email'] ?? '');
-$display_name = trim($input['display_name'] ?? '');
+$display_name = trim($input['display_name'] ?? ($input['displayName'] ?? ''));
 $password = $input['password'] ?? '';
 
 if (empty($email) || empty($display_name) || empty($password)) {

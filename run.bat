@@ -55,14 +55,14 @@ REM 3. KIEM TRA THU VIEN NODE_MODULES
 REM -----------------------------------------------------------------------------
 echo.
 echo [3/5] Kiem tra goi thu vien npm (node_modules)...
-if not exist "backend-php\realtime-socket\r\node_modules\" (
+if not exist "backend-php\realtime-socket\node_modules\" (
     echo     -> Dang tu dong cai dat thu vien cho WebSocket Server...
     pushd "%~dp0backend-php\realtime-socket"
     call npm.cmd install --loglevel=error
     popd
 )
 
-if not exist "frontend\r\node_modules\" (
+if not exist "frontend\node_modules\" (
     echo     -> Dang tu dong cai dat thu vien cho Frontend Vite...
     pushd "%~dp0frontend"
     call npm.cmd install --loglevel=error
