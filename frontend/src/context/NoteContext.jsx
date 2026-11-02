@@ -147,11 +147,19 @@ export function NoteProvider({ children }) {
               backendLabels = labelsRes.labels.map((l) => ({ id: l.id, name: l.name }));
             }
 
-            if (mergedNotes.length > 0) {
+            // Khi API phản hồi thành công, cập nhật dữ liệu của tài khoản đó (kể cả rỗng [] cho tài khoản mới)
+            if (notesRes && (notesRes.success !== undefined || Array.isArray(notesRes.notes))) {
+              setNotes(mergedNotes);
+              idbBulkPut('notes', mergedNotes);
+            } else if (mergedNotes.length > 0) {
               setNotes(mergedNotes);
               idbBulkPut('notes', mergedNotes);
             }
-            if (backendLabels.length > 0) {
+
+            if (labelsRes && (labelsRes.success !== undefined || Array.isArray(labelsRes.labels))) {
+              setLabels(backendLabels);
+              idbBulkPut('labels', backendLabels);
+            } else if (backendLabels.length > 0) {
               setLabels(backendLabels);
               idbBulkPut('labels', backendLabels);
             }
@@ -299,8 +307,10 @@ export function NoteProvider({ children }) {
     // 2. Đồng bộ lên Backend PHP (MySQL) khi online và đã đăng nhập
     if (isOnline && isAuthenticated) {
       try {
+        const isSharedWithMe = Boolean(updatedNote.sharedBy);
         const isTempId = typeof updatedNote.id === 'string' && updatedNote.id.startsWith('note-');
-        if (isTempId || updatedData.isNew) {
+        // Không gọi createNote nếu là note được người khác chia sẻ
+        if (!isSharedWithMe && (isTempId || updatedData.isNew)) {
           const res = await api.createNote({
             title: updatedNote.title || 'Ghi chú không tiêu đề',
             content: updatedNote.content || '',

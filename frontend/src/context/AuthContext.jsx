@@ -86,6 +86,8 @@ export function AuthProvider({ children }) {
     setToken(null);
     localStorage.removeItem('noteapp_user');
     localStorage.removeItem('noteapp_token');
+    localStorage.removeItem('noteapp_notes');
+    localStorage.removeItem('noteapp_labels');
   };
 
   // Tiêu chí 2: Kích hoạt tài khoản

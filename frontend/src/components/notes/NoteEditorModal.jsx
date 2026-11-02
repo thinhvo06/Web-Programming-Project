@@ -27,7 +27,9 @@ import {
   Download,
   AlertCircle,
   Users,
-  ListTodo
+  ListTodo,
+  Share2,
+  Eye
 } from 'lucide-react';
 
 export function NoteEditorModal() {
@@ -38,7 +40,8 @@ export function NoteEditorModal() {
     saveNoteAuto,
     saveStatus,
     labels,
-    setNoteToDelete
+    setNoteToDelete,
+    setNoteToShare
   } = useNotes();
 
   const { fontSize } = useTheme();
@@ -67,6 +70,11 @@ export function NoteEditorModal() {
   const fileInputRef = useRef(null);
   const debounceTimerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+
+  // Kiểm tra quyền chỉ xem (Read-only)
+  const isReadOnly =
+    editingNote?.userRole === 'read' ||
+    editingNote?.sharedBy?.permission === 'read';
 
   const fontClassMap = {
     small: 'text-xs',
@@ -125,7 +133,7 @@ export function NoteEditorModal() {
 
   // TIÊU CHÍ 14 (QUY ĐỊNH ĐỎ): Tự động lưu nội dung khi gõ (debounce 400ms). TUYỆT ĐỐI KHÔNG CÓ NÚT LƯU!
   const triggerAutoSave = (updatedFields) => {
-    if (!editingNote) return;
+    if (!editingNote || isReadOnly) return;
 
     // Phát sự kiện đang gõ chữ cho các client khác (Tiêu chí 26)
     emitUserTyping(editingNote.id, true);
@@ -279,11 +287,25 @@ export function NoteEditorModal() {
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
+    if (isReadOnly) {
+      closeEditor();
+      return;
+    }
     if (editingNote?.isNew && !title.trim() && !content.trim()) {
       closeEditor();
       return;
     }
-    if (title.trim() || content.trim()) {
+
+    const hasChanged =
+      editingNote?.isNew ||
+      title !== (editingNote?.title || '') ||
+      content !== (editingNote?.content || '') ||
+      color !== (editingNote?.color || 'default') ||
+      isPinned !== Boolean(editingNote?.isPinned) ||
+      JSON.stringify(noteLabels) !== JSON.stringify(editingNote?.labels || []) ||
+      JSON.stringify(attachments) !== JSON.stringify(editingNote?.attachments || []);
+
+    if (hasChanged && (title.trim() || content.trim())) {
       saveNoteAuto({
         ...editingNote,
         title,
@@ -352,9 +374,26 @@ export function NoteEditorModal() {
                 Chia sẻ bởi {editingNote.sharedBy.name || editingNote.sharedBy.email}
               </span>
             )}
+
+            {isReadOnly && (
+              <span className="text-[11px] bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 px-2 py-0.2 rounded ml-1 font-medium flex items-center gap-1">
+                <Eye className="w-3 h-3" />
+                <span>Chỉ xem</span>
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-1">
+            {!isReadOnly && !editingNote.isNew && (
+              <button
+                onClick={() => setNoteToShare(editingNote)}
+                className="p-1.5 text-zinc-400 hover:text-blue-600 rounded transition-colors"
+                title="Chia sẻ ghi chú này"
+              >
+                <Share2 className="w-4 h-4" />
+              </button>
+            )}
+
             <button
               onClick={handleTogglePin}
               className={`p-1.5 rounded transition-colors ${
@@ -389,17 +428,19 @@ export function NoteEditorModal() {
             type="text"
             value={title}
             onChange={handleTitleChange}
-            placeholder="Tiêu đề..."
-            className="w-full bg-transparent font-semibold text-base sm:text-lg text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none"
+            readOnly={isReadOnly}
+            placeholder={isReadOnly ? "Không có tiêu đề" : "Tiêu đề..."}
+            className={`w-full bg-transparent font-semibold text-base sm:text-lg text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none ${isReadOnly ? "cursor-default select-text" : ""}`}
           />
 
           {/* Ô nhập Nội dung (Tự động lưu khi gõ) */}
           <textarea
             value={content}
             onChange={handleContentChange}
-            placeholder="Ghi chú... (Nội dung tự động lưu khi bạn gõ)"
+            readOnly={isReadOnly}
+            placeholder={isReadOnly ? "Ghi chú trống" : "Ghi chú... (Nội dung tự động lưu khi bạn gõ)"}
             rows={7}
-            className={`w-full bg-transparent resize-none text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 focus:outline-none leading-relaxed ${fontClassMap[fontSize] || fontClassMap.medium}`}
+            className={`w-full bg-transparent resize-none text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 focus:outline-none leading-relaxed ${isReadOnly ? "cursor-default select-text" : ""} ${fontClassMap[fontSize] || fontClassMap.medium}`}
           />
 
           {/* Tệp đính kèm */}
@@ -474,6 +515,12 @@ export function NoteEditorModal() {
 
         {/* Toolbar chân modal (TUYỆT ĐỐI KHÔNG CÓ NÚT LƯU) */}
         <div className="px-4 py-2 border-t border-black/5 dark:border-white/10 flex items-center justify-between gap-2 bg-black/[0.02] dark:bg-white/[0.02]">
+          {isReadOnly ? (
+            <span className="text-xs text-zinc-400 italic flex items-center gap-1.5">
+              <Eye className="w-3.5 h-3.5" />
+              Ghi chú ở chế độ chỉ xem. Bạn không thể chỉnh sửa.
+            </span>
+          ) : (
           <div className="flex items-center gap-1 relative">
             {/* Chọn màu nền */}
             <div className="relative">
@@ -592,6 +639,7 @@ export function NoteEditorModal() {
               </button>
             )}
           </div>
+          )}
 
           <button
             onClick={handleClose}
