@@ -6,7 +6,10 @@ import {
   idbDelete,
   idbBulkPut,
   idbQueueSync,
-  idbClearSyncQueue
+  idbClearSyncQueue,
+  queueSyncAction,
+  getPendingSyncQueue,
+  clearPendingSyncQueue
 } from '../services/indexedDB';
 import { useDebounce } from '../hooks/useDebounce';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
@@ -65,13 +68,16 @@ export function NoteProvider({ children }) {
   const { showSuccess } = useToast();
   const isSyncingRef = useRef(false);
 
-  // Tiêu chí 31: Đồng bộ hóa dữ liệu ngoại tuyến (Offline Sync Queue) lên MySQL khi có mạng trở lại
+  // Tiêu chí 31: Đồng bộ hóa dữ liệu ngoại tuyến (Offline Sync Queue) lên máy chủ khi có mạng trở lại
   const flushOfflineSyncQueue = useCallback(async () => {
-    if (!isOnline || !isAuthenticated || isSyncingRef.current) return;
+    const isActuallyOnline = typeof navigator !== 'undefined' ? navigator.onLine : isOnline;
+    const token = localStorage.getItem('noteapp_token');
+    const hasAuth = isAuthenticated || Boolean(token);
+    if (!isActuallyOnline || !hasAuth || isSyncingRef.current) return;
     isSyncingRef.current = true;
 
     try {
-      const queue = await idbGetAll('syncQueue');
+      const queue = await getPendingSyncQueue();
       if (!queue || queue.length === 0) {
         isSyncingRef.current = false;
         return;
@@ -100,13 +106,13 @@ export function NoteProvider({ children }) {
               await api.deleteNote(payload.id);
               syncCount++;
             } catch (e) {
-              console.warn('[Offline Sync] Lỗi xóa note trên server:', payload.id, e);
+              console.warn('[Offline Sync] Lỗi xóa note trên máy chủ:', payload.id, e);
             }
           }
           await idbDelete('notes', payload.id);
         } else if (action === 'SAVE_NOTE') {
           if (isTempId) {
-            // Tạo note mới trên MySQL
+            // Tạo note mới trên máy chủ
             try {
               const res = await api.createNote({
                 title: payload.title || 'Ghi chú không tiêu đề',
@@ -123,13 +129,14 @@ export function NoteProvider({ children }) {
                 setNotes((prev) =>
                   prev.map((n) => (String(n.id) === String(payload.id) ? serverNote : n))
                 );
+                setEditingNote((current) => (current && String(current.id) === String(payload.id) ? serverNote : current));
                 syncCount++;
               }
             } catch (e) {
-              console.warn('[Offline Sync] Lỗi tạo note mới trên server:', payload.id, e);
+              console.warn('[Offline Sync] Lỗi tạo note mới trên máy chủ:', payload.id, e);
             }
           } else {
-            // Cập nhật note có sẵn trên MySQL
+            // Cập nhật note có sẵn trên máy chủ
             try {
               await api.updateNote(payload.id, {
                 title: payload.title,
@@ -140,17 +147,17 @@ export function NoteProvider({ children }) {
               });
               syncCount++;
             } catch (e) {
-              console.warn('[Offline Sync] Lỗi cập nhật note trên server:', payload.id, e);
+              console.warn('[Offline Sync] Lỗi cập nhật note trên máy chủ:', payload.id, e);
             }
           }
         }
       }
 
-      await idbClearSyncQueue();
+      await clearPendingSyncQueue();
 
       if (syncCount > 0) {
         console.log(`[PWA Offline Sync] Đã đồng bộ thành công ${syncCount} ghi chú lên máy chủ.`);
-        showSuccess(`Đã đồng bộ ${syncCount} ghi chú ngoại tuyến lên máy chủ!`);
+        showSuccess(`Đã tự động đồng bộ ${syncCount} ghi chú ngoại tuyến thành công!`);
       }
     } catch (err) {
       console.error('[PWA Offline Sync] Lỗi xử lý đồng bộ ngoại tuyến:', err);
@@ -158,6 +165,36 @@ export function NoteProvider({ children }) {
       isSyncingRef.current = false;
     }
   }, [isOnline, isAuthenticated, showSuccess]);
+
+  // Tự động kích hoạt đồng bộ khi trình duyệt khôi phục kết nối hoặc trạng thái mạng thay đổi
+  useEffect(() => {
+    if (isOnline && (isAuthenticated || localStorage.getItem('noteapp_token'))) {
+      flushOfflineSyncQueue();
+    }
+  }, [isOnline, isAuthenticated, flushOfflineSyncQueue]);
+
+  useEffect(() => {
+    const onOnline = () => {
+      console.log('[Network] Kết nối mạng đã khôi phục, kích hoạt đồng bộ...');
+      setTimeout(() => {
+        flushOfflineSyncQueue();
+      }, 300);
+    };
+    window.addEventListener('online', onOnline);
+
+    const timer = setInterval(() => {
+      const raw = localStorage.getItem('noteapp_sync_queue');
+      const onlineNow = typeof navigator !== 'undefined' ? navigator.onLine : true;
+      if (raw && raw !== '[]' && onlineNow) {
+        flushOfflineSyncQueue();
+      }
+    }, 2500);
+
+    return () => {
+      window.removeEventListener('online', onOnline);
+      clearInterval(timer);
+    };
+  }, [flushOfflineSyncQueue]);
 
   // State danh sách notes & labels
   const [notes, setNotes] = useState(() => {
@@ -388,9 +425,9 @@ export function NoteProvider({ children }) {
 
     // 1. Cập nhật local state và IndexedDB ngay lập tức để giao diện mượt
     setNotes((prevNotes) => {
-      const exists = prevNotes.some((n) => n.id === updatedNote.id);
+      const exists = prevNotes.some((n) => String(n.id) === String(updatedNote.id));
       if (exists) {
-        return prevNotes.map((n) => (n.id === updatedNote.id ? updatedNote : n));
+        return prevNotes.map((n) => (String(n.id) === String(updatedNote.id) ? updatedNote : n));
       } else {
         return [updatedNote, ...prevNotes];
       }
@@ -398,8 +435,9 @@ export function NoteProvider({ children }) {
 
     try {
       await idbPut('notes', updatedNote);
-      if (!isOnline) {
-        await idbQueueSync('SAVE_NOTE', updatedNote);
+      const isCurrentlyOffline = !isOnline || (typeof navigator !== 'undefined' && !navigator.onLine);
+      if (isCurrentlyOffline) {
+        await queueSyncAction('SAVE_NOTE', updatedNote);
       }
     } catch (e) {
       console.error('Lỗi auto-save IndexedDB:', e);
@@ -439,7 +477,8 @@ export function NoteProvider({ children }) {
           });
         }
       } catch (err) {
-        console.warn('Lỗi đồng bộ Backend PHP auto-save:', err);
+        console.warn('Lỗi đồng bộ auto-save, lưu vào hàng đợi:', err);
+        await queueSyncAction('SAVE_NOTE', updatedNote);
       }
     }
 
@@ -457,8 +496,9 @@ export function NoteProvider({ children }) {
 
     try {
       await idbDelete('notes', targetId);
-      if (!isOnline) {
-        await idbQueueSync('DELETE_NOTE', { id: targetId });
+      const isCurrentlyOffline = !isOnline || (typeof navigator !== 'undefined' && !navigator.onLine);
+      if (isCurrentlyOffline) {
+        await queueSyncAction('DELETE_NOTE', { id: targetId });
       }
     } catch (e) {
       console.error('Lỗi xóa note khỏi IndexedDB:', e);
@@ -470,7 +510,8 @@ export function NoteProvider({ children }) {
         try {
           await api.deleteNote(targetId, noteToDelete.password);
         } catch (err) {
-          console.warn('Lỗi xóa note trên Backend PHP:', err);
+          console.warn('Lỗi xóa note, lưu vào hàng đợi:', err);
+          await queueSyncAction('DELETE_NOTE', { id: targetId });
         }
       }
     }
