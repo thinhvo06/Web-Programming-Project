@@ -1,6 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api } from '../services/api';
 
+function isValidJwt(tok) {
+  return typeof tok === 'string' && tok.split('.').length === 3;
+}
+
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
@@ -8,8 +12,8 @@ export function AuthProvider({ children }) {
     const saved = localStorage.getItem('noteapp_user');
     const savedToken = localStorage.getItem('noteapp_token');
 
-    // Nếu không có token hoặc token là mock cũ thì yêu cầu đăng nhập
-    if (!savedToken || savedToken === 'mock-token-session' || savedToken.startsWith('mock-')) {
+    // Nếu không có token hoặc token không phải JWT 3 phần hợp lệ thì bắt buộc đăng nhập
+    if (!savedToken || !isValidJwt(savedToken) || savedToken.startsWith('mock-')) {
       localStorage.removeItem('noteapp_user');
       localStorage.removeItem('noteapp_token');
       return null;
@@ -30,7 +34,7 @@ export function AuthProvider({ children }) {
 
   const [token, setToken] = useState(() => {
     const savedToken = localStorage.getItem('noteapp_token');
-    if (!savedToken || savedToken === 'mock-token-session' || savedToken.startsWith('mock-')) {
+    if (!savedToken || !isValidJwt(savedToken) || savedToken.startsWith('mock-')) {
       return null;
     }
     return savedToken;

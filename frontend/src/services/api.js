@@ -47,19 +47,8 @@ export const api = {
         }
       };
     }
-    // Mock simulation
-    await new Promise((r) => setTimeout(r, 300));
-    return {
-      token: 'mock-jwt-token-' + Date.now(),
-      user: {
-        id: 'usr-' + Date.now(),
-        email,
-        displayName,
-        avatar: '',
-        isActivated: false,
-        preferences: { fontSize: 'medium', theme: 'light', defaultColor: 'default' }
-      }
-    };
+    // Khong su dung che do gia lap - Bat buoc xac thuc qua may chu
+    throw new Error('Chuc nang dang ky can ket noi truc tiep den may chu.');
   },
 
   async login({ email, password }) {
@@ -82,18 +71,8 @@ export const api = {
         }
       };
     }
-    await new Promise((r) => setTimeout(r, 300));
-    return {
-      token: 'mock-jwt-token-active',
-      user: {
-        id: 'usr-001',
-        email,
-        displayName: email.split('@')[0],
-        avatar: '',
-        isActivated: email !== 'unverified@tdtu.edu.vn',
-        preferences: { fontSize: 'medium', theme: 'light', defaultColor: 'default' }
-      }
-    };
+    // Khong su dung che do gia lap - Bat buoc xac thuc qua may chu
+    throw new Error('Chuc nang dang nhap can ket noi truc tiep den may chu.');
   },
 
   async activateAccount(token = 'sample-token') {

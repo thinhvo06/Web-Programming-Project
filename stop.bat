@@ -28,5 +28,5 @@ taskkill /F /IM php.exe 2>nul
 echo.
 echo [THANH CONG] Toan bo may chu PHP, WebSocket va Vite da duoc dung an toan.
 echo.
-timeout /t 2 /nobreak >nul
+ping 127.0.0.1 -n 3 >nul
 exit /b 0

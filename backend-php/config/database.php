@@ -4,7 +4,7 @@
  * Môn: 503073 - Lập trình & Ứng dụng Web (TDTU)
  */
 
-$db_host = 'localhost';
+$db_host = '127.0.0.1';
 $db_port = '3306';
 $db_name = 'tdtu_note_app';
 $db_user = 'root';

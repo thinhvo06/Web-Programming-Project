@@ -81,7 +81,7 @@ netstat -ano | findstr ":8000" | findstr "LISTENING" >nul
 if !errorlevel! neq 0 (
     echo     -> Khoi chay Backend PHP API tai cong 8000...
     pushd "%~dp0backend-php"
-    start "TDTU-PHP-Backend" cmd /k ""!PHP_EXE!" -S 0.0.0.0:8000 router.php"
+    start "TDTU-PHP-Backend" /d "%~dp0backend-php" cmd /k ""!PHP_EXE!" -S 0.0.0.0:8000 -t "%~dp0backend-php" router.php"
     popd
 ) else (
     echo     [OK] Backend PHP API da dang chay o cong 8000.
