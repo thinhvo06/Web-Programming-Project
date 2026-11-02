@@ -2,7 +2,7 @@
 // Chuẩn hóa localhost -> 127.0.0.1 để tránh lỗi phân giải IPv6 (::1) trên Windows khiến fetch bị Failed to fetch
 const rawApiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
 const API_BASE_URL = rawApiUrl.replace('//localhost:', '//127.0.0.1:');
-const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false';
+const USE_MOCK = false;
 
 // Bọc fetch để có thông báo lỗi kết nối rõ ràng khi Backend PHP chưa chạy
 async function safeFetch(url, options = {}) {
