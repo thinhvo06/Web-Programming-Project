@@ -2,16 +2,20 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNotes } from '../../context/NoteContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 import { NOTE_COLORS } from '../../services/mockData';
 import {
   joinNoteRoom,
   leaveNoteRoom,
   emitNoteChange,
   emitUserTyping,
+  emitCursorMove,
   onRoomUsers,
   onNoteUpdated,
+  onCursorMoved,
   onUserTyping
 } from '../../services/socket';
+import { CollaboratorCaret } from './CollaboratorCaret';
 import {
   X,
   Pin,
@@ -29,8 +33,31 @@ import {
   Users,
   ListTodo,
   Share2,
-  Eye
+  Eye,
+  MousePointer2,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
+
+// Bảng màu phân biệt các người dùng cùng cộng tác theo thời gian thực (Tiêu chí 26)
+const COLLAB_COLORS = [
+  { name: 'Xanh dương', hex: '#2563eb', bg: 'bg-blue-600', text: 'text-blue-600 dark:text-blue-400', border: 'border-blue-500', lightBg: 'bg-blue-50 dark:bg-blue-950/60' },
+  { name: 'Xanh lá', hex: '#16a34a', bg: 'bg-emerald-600', text: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-500', lightBg: 'bg-emerald-50 dark:bg-emerald-950/60' },
+  { name: 'Tím', hex: '#9333ea', bg: 'bg-purple-600', text: 'text-purple-600 dark:text-purple-400', border: 'border-purple-500', lightBg: 'bg-purple-50 dark:bg-purple-950/60' },
+  { name: 'Cam', hex: '#ea580c', bg: 'bg-amber-600', text: 'text-amber-600 dark:text-amber-400', border: 'border-amber-500', lightBg: 'bg-amber-50 dark:bg-amber-950/60' },
+  { name: 'Hồng sen', hex: '#e11d48', bg: 'bg-rose-600', text: 'text-rose-600 dark:text-rose-400', border: 'border-rose-500', lightBg: 'bg-rose-50 dark:bg-rose-950/60' },
+  { name: 'Xanh lơ', hex: '#0891b2', bg: 'bg-cyan-600', text: 'text-cyan-600 dark:text-cyan-400', border: 'border-cyan-500', lightBg: 'bg-cyan-50 dark:bg-cyan-950/60' },
+  { name: 'Chàm', hex: '#4f46e5', bg: 'bg-indigo-600', text: 'text-indigo-600 dark:text-indigo-400', border: 'border-indigo-500', lightBg: 'bg-indigo-50 dark:bg-indigo-950/60' },
+  { name: 'Vàng rực', hex: '#ca8a04', bg: 'bg-yellow-600', text: 'text-yellow-600 dark:text-yellow-400', border: 'border-yellow-500', lightBg: 'bg-yellow-50 dark:bg-yellow-950/60' },
+];
+
+function getCollabColor(emailOrId) {
+  if (!emailOrId) return COLLAB_COLORS[0];
+  let hash = 0;
+  const s = String(emailOrId);
+  for (let i = 0; i < s.length; i++) hash = s.charCodeAt(i) + ((hash << 5) - hash);
+  return COLLAB_COLORS[Math.abs(hash) % COLLAB_COLORS.length];
+}
 
 export function NoteEditorModal() {
   const {
@@ -44,8 +71,14 @@ export function NoteEditorModal() {
     setNoteToShare
   } = useNotes();
 
+  const { user: currentUser } = useAuth();
   const { fontSize } = useTheme();
   const { showSuccess, showError } = useToast();
+
+  // Danh sách con trỏ (remote pointers) của những người khác đang mở note
+  const [remoteCursors, setRemoteCursors] = useState({});
+  const titleCursors = Object.values(remoteCursors).filter((c) => c.field === 'title');
+  const contentCursors = Object.values(remoteCursors).filter((c) => c.field === 'content');
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -61,6 +94,7 @@ export function NoteEditorModal() {
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showLabelPicker, setShowLabelPicker] = useState(false);
   const [validationError, setValidationError] = useState('');
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const [showPasswordSetup, setShowPasswordSetup] = useState(false);
   const [pass1, setPass1] = useState('');
@@ -68,6 +102,9 @@ export function NoteEditorModal() {
   const [currentPassForDisable, setCurrentPassForDisable] = useState('');
 
   const fileInputRef = useRef(null);
+  const titleInputRef = useRef(null);
+  const contentAreaRef = useRef(null);
+  const mouseMoveTimerRef = useRef(null);
   const debounceTimerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
@@ -94,29 +131,46 @@ export function NoteEditorModal() {
       setValidationError('');
 
       // Tham gia phòng Socket.io
-      joinNoteRoom(editingNote.id);
+      joinNoteRoom(editingNote.id, currentUser);
 
       // Lắng nghe người cùng phòng (Tiêu chí 26)
       const unsubRoomUsers = onRoomUsers((data) => {
-        if (data && data.noteId === editingNote.id) {
+        if (data && String(data.noteId) === String(editingNote.id)) {
           setRoomUsers(data.users || []);
         }
       });
 
-      // Lắng nghe thay đổi nội dung từ người khác
+      // Lắng nghe thay đổi nội dung từ người khác tức thì (Realtime Instant Sync)
       const unsubNoteUpdated = onNoteUpdated((data) => {
-        if (data && data.noteId === editingNote.id) {
+        if (data && String(data.noteId) === String(editingNote.id)) {
           if (data.title !== undefined) setTitle(data.title);
           if (data.content !== undefined) setContent(data.content);
         }
       });
 
+      // Lắng nghe vị trí con trỏ (pointer/cursor) của người khác
+      const unsubCursor = onCursorMoved((data) => {
+        if (data && String(data.noteId) === String(editingNote.id)) {
+          if (data.user?.email && data.user.email === currentUser?.email) return;
+          const key = data.socketId || data.user?.id || data.user?.email;
+          setRemoteCursors((prev) => ({
+            ...prev,
+            [key]: {
+              ...data,
+              color: getCollabColor(data.user?.email || data.user?.id)
+            }
+          }));
+        }
+      });
+
       // Lắng nghe trạng thái đang gõ
       const unsubTyping = onUserTyping((data) => {
-        if (data && data.isTyping) {
-          setTypingUser(data.user?.display_name || 'Người cộng tác');
-        } else {
-          setTypingUser(null);
+        if (data && String(data.noteId) === String(editingNote.id)) {
+          if (data.isTyping) {
+            setTypingUser(data.user?.display_name || 'Người cộng tác');
+          } else {
+            setTypingUser(null);
+          }
         }
       });
 
@@ -124,8 +178,10 @@ export function NoteEditorModal() {
         leaveNoteRoom(editingNote.id);
         unsubRoomUsers();
         unsubNoteUpdated();
+        unsubCursor();
         unsubTyping();
         setRoomUsers([]);
+        setRemoteCursors({});
         setTypingUser(null);
       };
     }
@@ -165,15 +221,53 @@ export function NoteEditorModal() {
     }, 400);
   };
 
+  // Phát vị trí con trỏ (Cursor / Pointer) và vùng bôi đen (Selection Range)
+  const broadcastCursor = (field, e) => {
+    if (!editingNote || isReadOnly || !e?.target) return;
+    const start = e.target.selectionStart !== undefined ? e.target.selectionStart : 0;
+    const end = e.target.selectionEnd !== undefined ? e.target.selectionEnd : 0;
+    const direction = e.target.selectionDirection || 'forward';
+    const pos = direction === 'backward' ? start : end;
+    let line = 1;
+    if (field === 'content' && typeof e.target.value === 'string') {
+      line = e.target.value.substring(0, pos).split('\n').length;
+    }
+    emitCursorMove(editingNote.id, {
+      field,
+      position: pos,
+      line,
+      selectionStart: start,
+      selectionEnd: end,
+      selectionDirection: direction
+    });
+  };
+
+  const handleMouseMoveSelection = (field, e) => {
+    if (e.buttons !== 1) return;
+    if (mouseMoveTimerRef.current) return;
+    mouseMoveTimerRef.current = setTimeout(() => {
+      mouseMoveTimerRef.current = null;
+      broadcastCursor(field, e);
+    }, 60);
+  };
+
   const handleTitleChange = (e) => {
     const val = e.target.value;
     setTitle(val);
+    // 1. Đồng bộ Socket realtime tức thì cho các người dùng khác (Realtime Instant Sync)
+    emitNoteChange(editingNote.id, val, content);
+    broadcastCursor('title', e);
+    // 2. Tự động lưu vào Database với debounce 400ms (Quy tắc đỏ)
     triggerAutoSave({ title: val });
   };
 
   const handleContentChange = (e) => {
     const val = e.target.value;
     setContent(val);
+    // 1. Đồng bộ Socket realtime tức thì cho các người dùng khác (Realtime Instant Sync)
+    emitNoteChange(editingNote.id, title, val);
+    broadcastCursor('content', e);
+    // 2. Tự động lưu vào Database với debounce 400ms (Quy tắc đỏ)
     triggerAutoSave({ content: val });
   };
 
@@ -333,7 +427,7 @@ export function NoteEditorModal() {
 
       {/* Editor Modal Window (Dùng chung cho cả Tạo & Sửa - Tiêu chí 11 & 12) */}
       <div
-        className={`relative w-full max-w-xl rounded-lg shadow-lg border transition-all z-10 flex flex-col max-h-[85vh] overflow-hidden ${currentColorObj.bgLight} ${currentColorObj.bgDark} ${currentColorObj.border}`}
+        className={`relative w-full rounded-2xl shadow-2xl border transition-all duration-200 z-10 flex flex-col overflow-hidden ${isExpanded ? "max-w-6xl h-[94vh]" : "max-w-3xl md:max-w-4xl h-[86vh] min-h-[600px]"} ${currentColorObj.bgLight} ${currentColorObj.bgDark} ${currentColorObj.border}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Bar */}
@@ -354,17 +448,33 @@ export function NoteEditorModal() {
               )}
             </div>
 
-            {/* Trạng thái cộng tác viên cùng phòng Socket (Tiêu chí 26) */}
-            {roomUsers.length > 1 && (
-              <span className="text-[11px] bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 px-2 py-0.2 rounded font-medium flex items-center gap-1">
-                <Users className="w-3 h-3" />
-                <span>{roomUsers.length} người đang mở</span>
-              </span>
-            )}
+            {/* Trạng thái và Danh sách cộng tác viên đang cùng mở note (phân biệt màu riêng - Tiêu chí 26) */}
+            {roomUsers
+              .filter((u) => u.email !== currentUser?.email && String(u.id) !== String(currentUser?.id))
+              .map((collab) => {
+                const collabColor = getCollabColor(collab.email || collab.id);
+                const cursorInfo = Object.values(remoteCursors).find((c) => c.user?.email === collab.email);
+                return (
+                  <span
+                    key={collab.id || collab.socketId}
+                    className={`text-[11px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1.5 border shadow-2xs transition-all ${collabColor.lightBg} ${collabColor.border} ${collabColor.text}`}
+                    title={`${collab.display_name} (${collab.email})`}
+                  >
+                    <span className={`w-2 h-2 rounded-full animate-pulse ${collabColor.bg}`} />
+                    <span>{collab.display_name}</span>
+                    {cursorInfo && (
+                      <span className="text-[10px] opacity-80 font-normal">
+                        • {cursorInfo.field === 'title' ? 'ở Tiêu đề' : `dòng ${cursorInfo.line || 1}`}
+                      </span>
+                    )}
+                  </span>
+                );
+              })}
 
             {/* Thông báo đang gõ chữ */}
             {typingUser && (
-              <span className="text-[11px] text-blue-600 dark:text-blue-400 italic">
+              <span className="text-[11px] text-blue-600 dark:text-blue-400 italic flex items-center gap-1">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping" />
                 {typingUser} đang soạn thảo...
               </span>
             )}
@@ -405,6 +515,14 @@ export function NoteEditorModal() {
             </button>
 
             <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 rounded transition-colors"
+              title={isExpanded ? "Thu nhỏ lại" : "Mở rộng toàn màn hình"}
+            >
+              {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            </button>
+
+            <button
               onClick={handleClose}
               className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 rounded"
               title="Đóng (Esc)"
@@ -415,7 +533,7 @@ export function NoteEditorModal() {
         </div>
 
         {/* Nội dung soạn thảo */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        <div className="flex-1 flex flex-col overflow-y-auto p-5 sm:p-6 space-y-4">
           {validationError && (
             <div className="p-2 bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 text-xs rounded border border-red-200 dark:border-red-900 flex items-center gap-1.5">
               <AlertCircle className="w-3.5 h-3.5 shrink-0" />
@@ -423,25 +541,117 @@ export function NoteEditorModal() {
             </div>
           )}
 
-          {/* Ô nhập Tiêu đề */}
-          <input
-            type="text"
-            value={title}
-            onChange={handleTitleChange}
-            readOnly={isReadOnly}
-            placeholder={isReadOnly ? "Không có tiêu đề" : "Tiêu đề..."}
-            className={`w-full bg-transparent font-semibold text-base sm:text-lg text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none ${isReadOnly ? "cursor-default select-text" : ""}`}
-          />
+          {/* Vùng Tiêu đề với Con trỏ Google Sheets / Docs trực tiếp */}
+          <div
+            className="relative rounded-md transition-all duration-150"
+            style={
+              titleCursors.length > 0
+                ? {
+                    boxShadow: `0 0 0 2px ${titleCursors[0].color.hex}60`,
+                    padding: '2px 4px',
+                    margin: '-2px -4px'
+                  }
+                : undefined
+            }
+          >
+            {/* Tag phong cách Google Sheets ở góc phải khi có cộng tác viên đang ở Tiêu đề */}
+            {titleCursors.length > 0 && (
+              <div className="absolute right-0 -top-5 flex items-center gap-1 z-20 pointer-events-none">
+                {titleCursors.map((c) => (
+                  <span
+                    key={c.user?.id || c.socketId}
+                    className="inline-flex items-center gap-1 text-[10px] font-bold text-white px-2 py-0.5 rounded-t shadow-xs"
+                    style={{ backgroundColor: c.color.hex }}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                    <span>{c.user?.display_name || c.user?.email}</span>
+                  </span>
+                ))}
+              </div>
+            )}
 
-          {/* Ô nhập Nội dung (Tự động lưu khi gõ) */}
-          <textarea
-            value={content}
-            onChange={handleContentChange}
-            readOnly={isReadOnly}
-            placeholder={isReadOnly ? "Ghi chú trống" : "Ghi chú... (Nội dung tự động lưu khi bạn gõ)"}
-            rows={7}
-            className={`w-full bg-transparent resize-none text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 focus:outline-none leading-relaxed ${isReadOnly ? "cursor-default select-text" : ""} ${fontClassMap[fontSize] || fontClassMap.medium}`}
-          />
+            <input
+              ref={titleInputRef}
+              type="text"
+              value={title}
+              onChange={handleTitleChange}
+              onFocus={(e) => broadcastCursor('title', e)}
+              onKeyUp={(e) => broadcastCursor('title', e)}
+              onClick={(e) => broadcastCursor('title', e)}
+              onSelect={(e) => broadcastCursor('title', e)}
+              onMouseUp={(e) => broadcastCursor('title', e)}
+              onMouseMove={(e) => handleMouseMoveSelection('title', e)}
+              readOnly={isReadOnly}
+              placeholder={isReadOnly ? "Không có tiêu đề" : "Tiêu đề..."}
+              className={`w-full bg-transparent font-bold text-lg sm:text-xl text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none ${isReadOnly ? "cursor-default select-text" : ""}`}
+            />
+
+            {/* Con trỏ Google Sheets / Docs nhấp nháy trực tiếp tại vị trí chữ của Tiêu đề */}
+            {titleCursors.map((c) => (
+              <CollaboratorCaret
+                key={c.user?.id || c.socketId}
+                targetRef={titleInputRef}
+                cursor={c}
+                text={title}
+              />
+            ))}
+          </div>
+
+          {/* Vùng Nội dung với Con trỏ Google Sheets / Docs trực tiếp */}
+          <div
+            className="relative flex-1 flex flex-col rounded-md transition-all duration-150 min-h-[320px]"
+            style={
+              contentCursors.length > 0
+                ? {
+                    boxShadow: `0 0 0 2px ${contentCursors[0].color.hex}60`,
+                    padding: '2px 4px',
+                    margin: '-2px -4px'
+                  }
+                : undefined
+            }
+          >
+            {/* Tag phong cách Google Sheets ở góc phải khi có cộng tác viên đang ở Nội dung */}
+            {contentCursors.length > 0 && (
+              <div className="absolute right-0 -top-5 flex items-center gap-1 z-20 pointer-events-none">
+                {contentCursors.map((c) => (
+                  <span
+                    key={c.user?.id || c.socketId}
+                    className="inline-flex items-center gap-1 text-[10px] font-bold text-white px-2 py-0.5 rounded-t shadow-xs"
+                    style={{ backgroundColor: c.color.hex }}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                    <span>{c.user?.display_name || c.user?.email}</span>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <textarea
+              ref={contentAreaRef}
+              value={content}
+              onChange={handleContentChange}
+              onFocus={(e) => broadcastCursor('content', e)}
+              onKeyUp={(e) => broadcastCursor('content', e)}
+              onClick={(e) => broadcastCursor('content', e)}
+              onSelect={(e) => broadcastCursor('content', e)}
+              onMouseUp={(e) => broadcastCursor('content', e)}
+              onMouseMove={(e) => handleMouseMoveSelection('content', e)}
+              readOnly={isReadOnly}
+              placeholder={isReadOnly ? "Ghi chú trống" : "Ghi chú... (Nội dung tự động lưu khi bạn gõ)"}
+              rows={isExpanded ? 18 : 11}
+              className={`w-full flex-1 bg-transparent resize-none min-h-[300px] text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 focus:outline-none leading-relaxed ${isReadOnly ? "cursor-default select-text" : ""} ${fontClassMap[fontSize] || fontClassMap.medium}`}
+            />
+
+            {/* Con trỏ Google Sheets / Docs nhấp nháy trực tiếp tại vị trí chữ của Nội dung */}
+            {contentCursors.map((c) => (
+              <CollaboratorCaret
+                key={c.user?.id || c.socketId}
+                targetRef={contentAreaRef}
+                cursor={c}
+                text={content}
+              />
+            ))}
+          </div>
 
           {/* Tệp đính kèm */}
           {attachments.length > 0 && (

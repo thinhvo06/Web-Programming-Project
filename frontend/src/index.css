@@ -26,3 +26,17 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #a1a1aa;
 }
+
+/* Hiệu ứng con trỏ Google Sheets / Docs nhấp nháy chuẩn xác */
+@keyframes collabCaretBlink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.15;
+  }
+}
+
+.animate-collab-blink {
+  animation: collabCaretBlink 1.1s ease-in-out infinite;
+}

@@ -221,7 +221,7 @@ export function NoteProvider({ children }) {
       if (data && data.noteId) {
         setNotes((prevNotes) =>
           prevNotes.map((n) =>
-            n.id === data.noteId
+            String(n.id) === String(data.noteId)
               ? {
                   ...n,
                   title: data.title ?? n.title,
