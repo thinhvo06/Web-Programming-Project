@@ -67,103 +67,137 @@ export function NoteProvider({ children }) {
 
   const { showSuccess } = useToast();
   const isSyncingRef = useRef(false);
+  const activeSyncPromiseRef = useRef(null);
 
   // Tiêu chí 31: Đồng bộ hóa dữ liệu ngoại tuyến (Offline Sync Queue) lên máy chủ khi có mạng trở lại
   const flushOfflineSyncQueue = useCallback(async () => {
+    // Nếu đang có tiến trình đồng bộ đang chạy, trả về promise đó để đợi đồng bộ xong
+    if (activeSyncPromiseRef.current) {
+      return activeSyncPromiseRef.current;
+    }
+
     const isActuallyOnline = typeof navigator !== 'undefined' ? navigator.onLine : isOnline;
     const token = localStorage.getItem('noteapp_token');
     const hasAuth = isAuthenticated || Boolean(token);
-    if (!isActuallyOnline || !hasAuth || isSyncingRef.current) return;
-    isSyncingRef.current = true;
+    if (!isActuallyOnline || !hasAuth) return;
 
-    try {
-      const queue = await getPendingSyncQueue();
-      if (!queue || queue.length === 0) {
-        isSyncingRef.current = false;
-        return;
-      }
+    activeSyncPromiseRef.current = (async () => {
+      isSyncingRef.current = true;
+      try {
+        const queue = await getPendingSyncQueue();
+        if (!queue || queue.length === 0) return;
 
-      console.log(`[PWA Offline Sync] Phát hiện ${queue.length} tác vụ ngoại tuyến cần đồng bộ...`);
+        console.log(`[PWA Offline Sync] Phát hiện ${queue.length} tác vụ ngoại tuyến cần đồng bộ...`);
 
-      // Nhóm tác vụ theo noteId (giữ trạng thái mới nhất cho mỗi ghi chú)
-      const latestOps = new Map();
-      for (const item of queue) {
-        const noteId = item.payload?.id;
-        if (noteId !== undefined && noteId !== null) {
-          latestOps.set(String(noteId), item);
-        }
-      }
-
-      let syncCount = 0;
-
-      for (const [noteIdStr, item] of latestOps.entries()) {
-        const { action, payload } = item;
-        const isTempId = typeof payload.id === 'string' && payload.id.startsWith('note-');
-
-        if (action === 'DELETE_NOTE') {
-          if (!isTempId) {
-            try {
-              await api.deleteNote(payload.id);
-              syncCount++;
-            } catch (e) {
-              console.warn('[Offline Sync] Lỗi xóa note trên máy chủ:', payload.id, e);
-            }
+        // Nhóm tác vụ theo noteId (giữ trạng thái mới nhất cho mỗi ghi chú)
+        const latestOps = new Map();
+        for (const item of queue) {
+          const noteId = item.payload?.id;
+          if (noteId !== undefined && noteId !== null) {
+            latestOps.set(String(noteId), item);
           }
-          await idbDelete('notes', payload.id);
-        } else if (action === 'SAVE_NOTE') {
-          if (isTempId) {
-            // Tạo note mới trên máy chủ
-            try {
-              const res = await api.createNote({
-                title: payload.title || 'Ghi chú không tiêu đề',
-                content: payload.content || '',
-                color: payload.color || 'default',
-                is_pinned: Boolean(payload.isPinned),
-                labels: payload.labels || []
-              });
+        }
 
-              if (res && res.success && res.note) {
-                const serverNote = formatBackendNote(res.note);
-                await idbDelete('notes', payload.id);
-                await idbPut('notes', serverNote);
-                setNotes((prev) =>
-                  prev.map((n) => (String(n.id) === String(payload.id) ? serverNote : n))
-                );
-                setEditingNote((current) => (current && String(current.id) === String(payload.id) ? serverNote : current));
+        let syncCount = 0;
+
+        for (const [noteIdStr, item] of latestOps.entries()) {
+          const { action, payload } = item;
+          const isTempId = typeof payload.id === 'string' && payload.id.startsWith('note-');
+
+          if (action === 'DELETE_NOTE') {
+            if (!isTempId) {
+              try {
+                await api.deleteNote(payload.id);
                 syncCount++;
+              } catch (e) {
+                console.warn('[Offline Sync] Lỗi xóa note trên máy chủ:', payload.id, e);
               }
-            } catch (e) {
-              console.warn('[Offline Sync] Lỗi tạo note mới trên máy chủ:', payload.id, e);
             }
-          } else {
-            // Cập nhật note có sẵn trên máy chủ
-            try {
-              await api.updateNote(payload.id, {
-                title: payload.title,
-                content: payload.content,
-                color: payload.color,
-                is_pinned: Boolean(payload.isPinned),
-                labels: payload.labels
-              });
-              syncCount++;
-            } catch (e) {
-              console.warn('[Offline Sync] Lỗi cập nhật note trên máy chủ:', payload.id, e);
+            await idbDelete('notes', payload.id);
+            setNotes((prev) => prev.filter((n) => String(n.id) !== String(payload.id)));
+          } else if (action === 'SAVE_NOTE') {
+            if (isTempId) {
+              // Tạo note mới trên máy chủ
+              try {
+                const res = await api.createNote({
+                  title: payload.title || 'Ghi chú không tiêu đề',
+                  content: payload.content || '',
+                  color: payload.color || 'default',
+                  is_pinned: Boolean(payload.isPinned),
+                  labels: (payload.labels || []).map((l) => (typeof l === 'string' ? l : (l.name || l.id)))
+                });
+
+                if (res && res.success && res.note) {
+                  let serverNote = formatBackendNote(res.note);
+                  if (payload.isLocked && payload.password) {
+                    try {
+                      await api.lockNote(serverNote.id, payload.password);
+                      serverNote = { ...serverNote, isLocked: true, password: payload.password };
+                    } catch (e) {
+                      console.warn('Lỗi lock note mới:', e);
+                    }
+                  }
+
+                  await idbDelete('notes', payload.id);
+                  await idbPut('notes', serverNote);
+
+                  setNotes((prev) => {
+                    const exists = prev.some((n) => String(n.id) === String(payload.id));
+                    if (exists) {
+                      return prev.map((n) => (String(n.id) === String(payload.id) ? serverNote : n));
+                    } else {
+                      return [serverNote, ...prev.filter((n) => String(n.id) !== String(serverNote.id))];
+                    }
+                  });
+
+                  setEditingNote((current) =>
+                    current && String(current.id) === String(payload.id) ? serverNote : current
+                  );
+                  syncCount++;
+                }
+              } catch (e) {
+                console.warn('[Offline Sync] Lỗi tạo note mới trên máy chủ:', payload.id, e);
+              }
+            } else {
+              // Cập nhật note có sẵn trên máy chủ
+              try {
+                const res = await api.updateNote(payload.id, {
+                  title: payload.title,
+                  content: payload.content,
+                  color: payload.color,
+                  is_pinned: Boolean(payload.isPinned),
+                  labels: (payload.labels || []).map((l) => (typeof l === 'string' ? l : (l.name || l.id)))
+                });
+                if (res && res.success) {
+                  const updatedNote = res.note ? formatBackendNote(res.note) : payload;
+                  setNotes((prev) =>
+                    prev.map((n) => (String(n.id) === String(payload.id) ? { ...n, ...updatedNote } : n))
+                  );
+                  await idbPut('notes', updatedNote);
+                  syncCount++;
+                }
+              } catch (e) {
+                console.warn('[Offline Sync] Lỗi cập nhật note trên máy chủ:', payload.id, e);
+              }
             }
           }
         }
-      }
 
-      await clearPendingSyncQueue();
+        await clearPendingSyncQueue();
 
-      if (syncCount > 0) {
-        console.log(`[PWA Offline Sync] Đã đồng bộ thành công ${syncCount} ghi chú lên máy chủ.`);
-        showSuccess(`Đã tự động đồng bộ ${syncCount} ghi chú ngoại tuyến thành công!`);
+        if (syncCount > 0) {
+          console.log(`[PWA Offline Sync] Đã đồng bộ thành công ${syncCount} ghi chú lên máy chủ.`);
+          showSuccess(`Đã tự động đồng bộ ${syncCount} ghi chú ngoại tuyến thành công!`);
+        }
+      } catch (err) {
+        console.error('[PWA Offline Sync] Lỗi xử lý đồng bộ ngoại tuyến:', err);
+      } finally {
+        isSyncingRef.current = false;
+        activeSyncPromiseRef.current = null;
       }
-    } catch (err) {
-      console.error('[PWA Offline Sync] Lỗi xử lý đồng bộ ngoại tuyến:', err);
-    } finally {
-      isSyncingRef.current = false;
-    }
+    })();
+
+    return activeSyncPromiseRef.current;
   }, [isOnline, isAuthenticated, showSuccess]);
 
   // Tự động kích hoạt đồng bộ khi trình duyệt khôi phục kết nối hoặc trạng thái mạng thay đổi
@@ -276,8 +310,35 @@ export function NoteProvider({ children }) {
             }
 
             const allNotesMap = new Map();
-            backendNotes.forEach((n) => allNotesMap.set(n.id, n));
-            sharedNotes.forEach((n) => allNotesMap.set(n.id, n));
+            backendNotes.forEach((n) => allNotesMap.set(String(n.id), n));
+            sharedNotes.forEach((n) => allNotesMap.set(String(n.id), n));
+
+            // BẢO VỆ GHI CHÚ OFFLINE: Giữ lại các ghi chú tạm (temp notes) và ghi chú đang có tác vụ pending trong sync queue
+            try {
+              const pendingQueue = await getPendingSyncQueue();
+              const pendingNoteIds = new Set(
+                (pendingQueue || []).map((item) => String(item.payload?.id)).filter(Boolean)
+              );
+
+              const localNotes = await idbGetAll('notes');
+              for (const ln of localNotes) {
+                const lnId = String(ln.id);
+                const isTemp = typeof ln.id === 'string' && ln.id.startsWith('note-');
+                const hasPendingSync = pendingNoteIds.has(lnId);
+
+                if (isTemp || hasPendingSync || !allNotesMap.has(lnId)) {
+                  allNotesMap.set(lnId, ln);
+                } else if (allNotesMap.has(lnId)) {
+                  const serverNote = allNotesMap.get(lnId);
+                  if (ln.updatedAt && serverNote.updatedAt && new Date(ln.updatedAt) > new Date(serverNote.updatedAt)) {
+                    allNotesMap.set(lnId, ln);
+                  }
+                }
+              }
+            } catch (e) {
+              console.warn('Lỗi đọc localNotes IndexedDB:', e);
+            }
+
             const mergedNotes = Array.from(allNotesMap.values());
 
             let backendLabels = [];
@@ -446,9 +507,10 @@ export function NoteProvider({ children }) {
       return current;
     });
 
+    const isCurrentlyOffline = !isOnline || (typeof navigator !== 'undefined' && !navigator.onLine);
+
     try {
       await idbPut('notes', updatedNote);
-      const isCurrentlyOffline = !isOnline || (typeof navigator !== 'undefined' && !navigator.onLine);
       if (isCurrentlyOffline) {
         await queueSyncAction('SAVE_NOTE', updatedNote);
       }
@@ -457,7 +519,7 @@ export function NoteProvider({ children }) {
     }
 
     // 2. Đồng bộ lên Backend PHP (MySQL) khi online và đã đăng nhập
-    if (isOnline && isAuthenticated) {
+    if (!isCurrentlyOffline && isAuthenticated) {
       try {
         const isSharedWithMe = Boolean(updatedNote.sharedBy);
         const isTempId = typeof updatedNote.id === 'string' && updatedNote.id.startsWith('note-');
@@ -482,11 +544,11 @@ export function NoteProvider({ children }) {
               }
             }
             setNotes((prev) =>
-              prev.map((n) => (n.id === updatedNote.id ? serverNote : n))
+              prev.map((n) => (String(n.id) === String(updatedNote.id) ? serverNote : n))
             );
             await idbDelete('notes', updatedNote.id);
             await idbPut('notes', serverNote);
-            setEditingNote((prev) => (prev && prev.id === updatedNote.id ? serverNote : prev));
+            setEditingNote((prev) => (prev && String(prev.id) === String(updatedNote.id) ? serverNote : prev));
           }
         } else {
           await api.updateNote(updatedNote.id, {
@@ -513,11 +575,12 @@ export function NoteProvider({ children }) {
     if (!noteToDelete) return;
     const targetId = noteToDelete.id;
 
-    setNotes((prev) => prev.filter((n) => n.id !== targetId));
+    setNotes((prev) => prev.filter((n) => String(n.id) !== String(targetId)));
+
+    const isCurrentlyOffline = !isOnline || (typeof navigator !== 'undefined' && !navigator.onLine);
 
     try {
       await idbDelete('notes', targetId);
-      const isCurrentlyOffline = !isOnline || (typeof navigator !== 'undefined' && !navigator.onLine);
       if (isCurrentlyOffline) {
         await queueSyncAction('DELETE_NOTE', { id: targetId });
       }
@@ -525,7 +588,7 @@ export function NoteProvider({ children }) {
       console.error('Lỗi xóa note khỏi IndexedDB:', e);
     }
 
-    if (isOnline && isAuthenticated) {
+    if (!isCurrentlyOffline && isAuthenticated) {
       const isTempId = typeof targetId === 'string' && targetId.startsWith('note-');
       if (!isTempId) {
         try {

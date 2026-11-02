@@ -57,8 +57,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $color = $input['color'] ?? 'default';
     $label_ids = $input['label_ids'] ?? [];
 
-    if (empty($title) || empty($content)) {
-        json_response(400, false, 'Tiêu đề và Nội dung là thông tin bắt buộc phải nhập.');
+    if (empty($title) && empty($content)) {
+        json_response(400, false, 'Vui lòng nhập ít nhất Tiêu đề hoặc Nội dung ghi chú.');
+    }
+    if (empty($title)) {
+        $title = 'Ghi chú không tiêu đề';
     }
 
     $pinned_at = $is_pinned ? date('Y-m-d H:i:s') : null;
