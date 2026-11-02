@@ -35,7 +35,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     $stmt_del->execute([$note_id, strtolower($email)]);
     json_response(200, true, "Đã thu hồi quyền chia sẻ cho {$email} thành công!");
 }
-}
 
 // Kiểm tra tài khoản người nhận tồn tại
 $stmt_rec = $pdo->prepare("SELECT id, email, display_name, avatar_url FROM users WHERE email = ?");
