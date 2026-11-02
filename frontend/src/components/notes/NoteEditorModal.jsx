@@ -140,6 +140,15 @@ export function NoteEditorModal() {
       setAttachments(editingNote.attachments || []);
       setValidationError('');
 
+      if (editingNote.autoOpenPasswordSetup) {
+        setPasswordSetupTab(editingNote.isLocked ? 'change' : 'enable');
+        setPassError('');
+        setCurrentPass('');
+        setNewPass1('');
+        setNewPass2('');
+        setShowPasswordSetup(true);
+      }
+
       // Tham gia phòng Socket.io
       joinNoteRoom(editingNote.id, currentUser);
 
@@ -989,7 +998,7 @@ export function NoteEditorModal() {
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                setPasswordSetupTab('change');
+                setPasswordSetupTab(editingNote.isLocked ? 'change' : 'enable');
                 setPassError('');
                 setCurrentPass('');
                 setNewPass1('');
@@ -1082,7 +1091,7 @@ export function NoteEditorModal() {
                   <button
                     type="button"
                     onClick={() => {
-                      setPasswordSetupTab('change');
+                      setPasswordSetupTab(editingNote.isLocked ? 'change' : 'enable');
                       setPassError('');
                     }}
                     className={`flex-1 pb-2 text-center transition-colors border-b-2 ${

@@ -5,6 +5,7 @@ import { HighlightText } from '../common/HighlightText';
 import {
   Pin,
   Lock,
+  Unlock,
   Users,
   Paperclip,
   Trash2,
@@ -27,11 +28,19 @@ export function NoteCard({ note }) {
 
   const handleDelete = (e) => {
     e.stopPropagation();
+    if (!isUnlocked) {
+      setLockedNotePrompt({ note, targetAction: 'delete' });
+      return;
+    }
     setNoteToDelete(note);
   };
 
   const handleShare = (e) => {
     e.stopPropagation();
+    if (!isUnlocked) {
+      setLockedNotePrompt({ note, targetAction: 'share' });
+      return;
+    }
     setNoteToShare(note);
   };
 
@@ -65,9 +74,9 @@ export function NoteCard({ note }) {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  openEditNote(note);
+                  openEditNote(note, isUnlocked);
                 }}
-                title={isUnlocked ? "Ghi chú đã mở khóa" : "Ghi chú bảo mật - Bấm để nhập mật khẩu"}
+                title={isUnlocked ? "Ghi chú đã mở khóa (Bấm để đổi/hủy mật khẩu)" : "Ghi chú bảo mật - Bấm để nhập mật khẩu"}
                 className="text-amber-600 hover:text-amber-700 cursor-pointer"
               >
                 <Lock className="w-3.5 h-3.5" />
@@ -168,9 +177,17 @@ export function NoteCard({ note }) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 mb-1">
               {note.isLocked && (
-                <span title="Ghi chú bảo mật" className="text-zinc-500">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openEditNote(note, isUnlocked);
+                  }}
+                  title={isUnlocked ? "Ghi chú đã mở khóa (Bấm để đổi/hủy mật khẩu)" : "Ghi chú bảo mật - Bấm để nhập mật khẩu"}
+                  className="text-amber-600 hover:text-amber-700 cursor-pointer"
+                >
                   <Lock className="w-3.5 h-3.5" />
-                </span>
+                </button>
               )}
               {(note.sharedBy || (note.sharedWith && note.sharedWith.length > 0)) && (
                 <span title="Được chia sẻ" className="text-blue-600 dark:text-blue-400">
@@ -258,7 +275,7 @@ export function NoteCard({ note }) {
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                openEditNote(note);
+                openEditNote(note, true);
               }}
               className={`p-1 rounded transition-colors ${
                 note.isLocked

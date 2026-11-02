@@ -8,7 +8,9 @@ export function NotePasswordModal() {
     lockedNotePrompt,
     setLockedNotePrompt,
     unlockNoteWithPassword,
-    openEditNote
+    openEditNote,
+    setNoteToDelete,
+    setNoteToShare
   } = useNotes();
 
   const { showSuccess } = useToast();
@@ -19,6 +21,8 @@ export function NotePasswordModal() {
   if (!lockedNotePrompt) return null;
 
   const note = lockedNotePrompt.note;
+  const targetAction = lockedNotePrompt.targetAction || 'edit';
+  const openPasswordSetup = Boolean(lockedNotePrompt.openPasswordSetup);
 
   const handleUnlock = async (e) => {
     e.preventDefault();
@@ -33,14 +37,17 @@ export function NotePasswordModal() {
       const res = await unlockNoteWithPassword(note.id, pwd);
       if (res && res.success) {
         showSuccess('Mở khóa thành công');
-        const targetAction = lockedNotePrompt.targetAction;
         const unlockedNote = res.note || { ...note, isUnlocked: true, password: pwd };
         setLockedNotePrompt(null);
         setPasswordInput('');
         setErrorMsg('');
 
         if (targetAction === 'edit') {
-          openEditNote(unlockedNote);
+          openEditNote(unlockedNote, openPasswordSetup);
+        } else if (targetAction === 'delete') {
+          setNoteToDelete(unlockedNote);
+        } else if (targetAction === 'share') {
+          setNoteToShare(unlockedNote);
         }
       } else {
         setErrorMsg(res?.message || 'Mật khẩu không chính xác');
@@ -58,11 +65,34 @@ export function NotePasswordModal() {
     setErrorMsg('');
   };
 
+  const getTitle = () => {
+    if (targetAction === 'delete') return 'Xác thực mật khẩu để xóa';
+    if (targetAction === 'share') return 'Xác thực mật khẩu để chia sẻ';
+    return 'Nhập mật khẩu ghi chú';
+  };
+
+  const getPromptMessage = () => {
+    if (targetAction === 'delete') {
+      return `Ghi chú "${note?.title || 'không tiêu đề'}" đang được cài mật khẩu bảo vệ. Bạn cần nhập đúng mật khẩu để xác nhận xóa.`;
+    }
+    if (targetAction === 'share') {
+      return `Ghi chú "${note?.title || 'không tiêu đề'}" đang được cài mật khẩu bảo vệ. Bạn cần nhập đúng mật khẩu để chia sẻ.`;
+    }
+    return `Ghi chú "${note?.title || 'không tiêu đề'}" đã được cài mật khẩu bảo vệ.`;
+  };
+
+  const getButtonText = () => {
+    if (isSubmitting) return 'Đang kiểm tra...';
+    if (targetAction === 'delete') return 'Xác nhận xóa';
+    if (targetAction === 'share') return 'Mở để chia sẻ';
+    return 'Mở khóa';
+  };
+
   return (
-    <Modal isOpen={Boolean(lockedNotePrompt)} onClose={handleClose} maxWidth="max-w-sm" title="Nhập mật khẩu ghi chú">
+    <Modal isOpen={Boolean(lockedNotePrompt)} onClose={handleClose} maxWidth="max-w-sm" title={getTitle()}>
       <form onSubmit={handleUnlock} className="space-y-3">
         <p className="text-xs text-zinc-600 dark:text-zinc-400">
-          Ghi chú "<strong>{note.title || 'không tiêu đề'}</strong>" đã được cài mật khẩu bảo vệ.
+          {getPromptMessage()}
         </p>
 
         <div>
@@ -73,7 +103,7 @@ export function NotePasswordModal() {
               setPasswordInput(e.target.value);
               setErrorMsg('');
             }}
-            placeholder="Nhập mật khẩu..."
+            placeholder="Nhập mật khẩu ghi chú..."
             className="w-full px-3 py-1.5 text-xs bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
             autoFocus
             disabled={isSubmitting}
@@ -95,9 +125,11 @@ export function NotePasswordModal() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="px-3 py-1.5 text-xs font-medium bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded"
+            className={`px-3 py-1.5 text-xs font-medium text-white rounded transition-colors disabled:opacity-50 ${
+              targetAction === 'delete' ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'
+            }`}
           >
-            {isSubmitting ? 'Đang kiểm tra...' : 'Mở khóa'}
+            {getButtonText()}
           </button>
         </div>
       </form>

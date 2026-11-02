@@ -399,7 +399,7 @@ export function NoteProvider({ children }) {
   }, [activeFilter, selectedColorFilter]);
 
   // Mở màn hình sửa note
-  const openEditNote = useCallback((note) => {
+  const openEditNote = useCallback((note, openPasswordSetup = false) => {
     const isUnlocked =
       !note.isLocked ||
       note.isUnlocked ||
@@ -407,10 +407,10 @@ export function NoteProvider({ children }) {
       unlockedNoteIds.has(String(note.id)) ||
       unlockedNoteIds.has(Number(note.id));
     if (!isUnlocked) {
-      setLockedNotePrompt({ note, targetAction: 'edit' });
+      setLockedNotePrompt({ note, targetAction: 'edit', openPasswordSetup });
       return;
     }
-    setEditingNote({ ...note, isNew: false, isUnlocked: true });
+    setEditingNote({ ...note, isNew: false, isUnlocked: true, autoOpenPasswordSetup: openPasswordSetup });
     setIsEditorOpen(true);
   }, [unlockedNoteIds]);
 
