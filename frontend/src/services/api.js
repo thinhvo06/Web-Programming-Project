@@ -82,9 +82,11 @@ export const api = {
     };
   },
 
-  async activateAccount(token) {
+  async activateAccount(token = 'sample-token') {
     if (!USE_MOCK) {
-      const res = await fetch(`${API_BASE_URL}/auth/activate/${token}`);
+      const res = await fetch(`${API_BASE_URL}/auth/activate/${token}`, {
+        headers: getAuthHeader()
+      });
       return res.json();
     }
     await new Promise((r) => setTimeout(r, 200));
