@@ -7,7 +7,7 @@ const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false';
 // Bọc fetch để có thông báo lỗi kết nối rõ ràng khi Backend PHP chưa chạy
 async function safeFetch(url, options = {}) {
   try {
-    return await safeFetch(url, options);
+    return await window.fetch(url, options);
   } catch (err) {
     if (err.name === 'TypeError' || err.message === 'Failed to fetch') {
       throw new Error('Không thể kết nối đến máy chủ Backend (http://127.0.0.1:8000). Vui lòng kiểm tra backend PHP/XAMPP đã được bật chưa!');
