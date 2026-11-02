@@ -1,24 +1,39 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api } from '../services/api';
-import { INITIAL_USER } from '../services/mockData';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('noteapp_user');
+    const savedToken = localStorage.getItem('noteapp_token');
+
+    // Nếu không có token hoặc token là mock cũ thì yêu cầu đăng nhập
+    if (!savedToken || savedToken === 'mock-token-session' || savedToken.startsWith('mock-')) {
+      localStorage.removeItem('noteapp_user');
+      localStorage.removeItem('noteapp_token');
+      return null;
+    }
+
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.email !== 'hoangnam@student.tdtu.edu.vn') {
+          return parsed;
+        }
       } catch (e) {
         console.error('Error parsing stored user', e);
       }
     }
-    return INITIAL_USER;
+    return null;
   });
 
   const [token, setToken] = useState(() => {
-    return localStorage.getItem('noteapp_token') || 'mock-token-session';
+    const savedToken = localStorage.getItem('noteapp_token');
+    if (!savedToken || savedToken === 'mock-token-session' || savedToken.startsWith('mock-')) {
+      return null;
+    }
+    return savedToken;
   });
 
   const [isLoading, setIsLoading] = useState(false);
