@@ -21,7 +21,7 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = 'max-w-md',
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto" style={{ zIndex: 9999 }}>
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/40 transition-opacity"

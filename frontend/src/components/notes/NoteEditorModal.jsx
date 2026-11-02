@@ -985,13 +985,25 @@ export function NoteEditorModal() {
 
             {/* Khóa mật khẩu */}
             <button
-              onClick={() => setShowPasswordSetup(true)}
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setPasswordSetupTab('change');
+                setPassError('');
+                setCurrentPass('');
+                setNewPass1('');
+                setNewPass2('');
+                setShowPasswordSetup(true);
+              }}
               className={`p-1.5 rounded transition-colors ${
-                editingNote.isLocked ? 'text-red-600' : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
+                editingNote.isLocked
+                  ? 'text-amber-600 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60'
+                  : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-black/5 dark:hover:bg-white/5'
               }`}
-              title={editingNote.isLocked ? 'Quản lý mật khẩu note' : 'Đặt mật khẩu note'}
+              title={editingNote.isLocked ? 'Quản lý mật khẩu note (Đổi pass / Hủy khóa)' : 'Đặt mật khẩu note'}
             >
-              {editingNote.isLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+              {editingNote.isLocked ? <Lock className="w-4 h-4 text-amber-600" /> : <Unlock className="w-4 h-4" />}
             </button>
 
             {/* Nút xóa */}
@@ -1018,10 +1030,15 @@ export function NoteEditorModal() {
 
       {/* POPUP QUẢN LÝ / THIẾT LẬP MẬT KHẨU GHI CHÚ */}
       {showPasswordSetup && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4">
+        <div
+          className="fixed inset-0 flex items-center justify-center p-4 z-[99999]"
+          style={{ zIndex: 99999 }}
+        >
           <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-xs"
-            onClick={() => {
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+            style={{ zIndex: 99999 }}
+            onClick={(e) => {
+              e.stopPropagation();
               if (!passSubmitting) {
                 setShowPasswordSetup(false);
                 setPassError('');
@@ -1031,7 +1048,11 @@ export function NoteEditorModal() {
               }
             }}
           />
-          <div className="relative w-full max-w-sm bg-white dark:bg-zinc-900 rounded-lg shadow-xl p-5 border border-zinc-200 dark:border-zinc-800 z-10">
+          <div
+            className="relative w-full max-w-sm bg-white dark:bg-zinc-900 rounded-lg shadow-2xl p-5 border border-zinc-200 dark:border-zinc-800"
+            style={{ zIndex: 100000 }}
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Header */}
             <div className="flex items-center gap-2 mb-3">
               <div className={`p-2 rounded-full ${editingNote.isLocked ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-600' : 'bg-blue-100 dark:bg-blue-950/60 text-blue-600'}`}>

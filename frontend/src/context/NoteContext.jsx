@@ -472,7 +472,15 @@ export function NoteProvider({ children }) {
           });
 
           if (res && res.success && res.note) {
-            const serverNote = formatBackendNote(res.note);
+            let serverNote = formatBackendNote(res.note);
+            if (updatedNote.isLocked && updatedNote.password) {
+              try {
+                await api.lockNote(serverNote.id, updatedNote.password);
+                serverNote = { ...serverNote, isLocked: true, password: updatedNote.password };
+              } catch (e) {
+                console.warn('Lỗi lock note mới:', e);
+              }
+            }
             setNotes((prev) =>
               prev.map((n) => (n.id === updatedNote.id ? serverNote : n))
             );

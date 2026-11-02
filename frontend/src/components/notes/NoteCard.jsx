@@ -61,9 +61,17 @@ export function NoteCard({ note }) {
               </span>
             )}
             {note.isLocked && (
-              <span title="Ghi chú bảo mật" className="text-zinc-500">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openEditNote(note);
+                }}
+                title={isUnlocked ? "Ghi chú đã mở khóa" : "Ghi chú bảo mật - Bấm để nhập mật khẩu"}
+                className="text-amber-600 hover:text-amber-700 cursor-pointer"
+              >
                 <Lock className="w-3.5 h-3.5" />
-              </span>
+              </button>
             )}
             {(note.sharedBy || (note.sharedWith && note.sharedWith.length > 0)) && (
               <span title="Được chia sẻ" className="text-blue-600 dark:text-blue-400">
@@ -193,9 +201,16 @@ export function NoteCard({ note }) {
 
         {/* Nội dung ghi chú */}
         {!isUnlocked ? (
-          <div className="py-4 text-center">
-            <Lock className="w-4 h-4 mx-auto text-zinc-400 mb-1" />
-            <p className="text-xs text-zinc-400">Đã khóa bằng mật khẩu</p>
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              openEditNote(note);
+            }}
+            className="py-4 text-center cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 rounded-md transition-colors"
+          >
+            <Lock className="w-5 h-5 mx-auto text-amber-500 mb-1" />
+            <p className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Đã khóa bằng mật khẩu</p>
+            <span className="text-[11px] text-blue-600 dark:text-blue-400 underline">Bấm để nhập mật khẩu</span>
           </div>
         ) : (
           <>
@@ -239,6 +254,21 @@ export function NoteCard({ note }) {
           <span>{formatDate(note.updatedAt || note.createdAt)}</span>
 
           <div className="flex items-center gap-1 opacity-90 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                openEditNote(note);
+              }}
+              className={`p-1 rounded transition-colors ${
+                note.isLocked
+                  ? 'text-amber-600 hover:text-amber-700'
+                  : 'text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200'
+              }`}
+              title={note.isLocked ? 'Quản lý mật khẩu (Đổi pass / Hủy bảo vệ)' : 'Khóa mật khẩu ghi chú'}
+            >
+              {note.isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+            </button>
             <button
               onClick={handleShare}
               className="p-1 hover:text-blue-600 rounded"
