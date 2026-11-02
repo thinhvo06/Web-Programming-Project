@@ -56,7 +56,7 @@ netstat -ano | findstr ":8000" | findstr "LISTENING" >nul
 if errorlevel 1 (
     echo [2/4] Starting PHP backend on port 8000...
     pushd "%~dp0backend-php"
-    start "PHP-Backend" "%PHP_EXE%" -S 0.0.0.0:8000 router.php
+    start "PHP-Backend" cmd /k ""%PHP_EXE%" -S 0.0.0.0:8000 router.php"
     popd
 ) else (
     echo [2/4] PHP backend is already running on port 8000.
@@ -67,7 +67,7 @@ netstat -ano | findstr ":5001" | findstr "LISTENING" >nul
 if errorlevel 1 (
     echo [3/4] Starting WebSocket server on port 5001...
     pushd "%~dp0backend-php\realtime-socket"
-    start "WebSocket-Server" cmd /c "node server.js"
+    start "WebSocket-Server" cmd /k "npm start"
     popd
 ) else (
     echo [3/4] WebSocket server is already running on port 5001.
@@ -78,7 +78,7 @@ netstat -ano | findstr ":5173" | findstr "LISTENING" >nul
 if errorlevel 1 (
     echo [4/4] Starting Frontend Vite on port 5173...
     pushd "%~dp0frontend"
-    start "Frontend-Vite" cmd /c "npm run dev -- --host 0.0.0.0 --port 5173"
+    start "Frontend-Vite" cmd /k "npm run dev -- --host 0.0.0.0 --port 5173"
     popd
 ) else (
     echo [4/4] Frontend Vite is already running on port 5173.
