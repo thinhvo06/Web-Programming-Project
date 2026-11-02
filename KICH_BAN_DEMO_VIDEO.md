@@ -268,7 +268,7 @@ flowchart LR
      - Header hiện huy hiệu màu đỏ: *"Offline"*.
      - Tạo 1 ghi chú mới khi đang mất mạng: `Note ngoại tuyến khi mất mạng`.
      - Chuyển tab Network lại thành **Online** $\rightarrow$ Toast thông báo: *"Đã tự động đồng bộ ghi chú ngoại tuyến thành công!"*, ghi chú được lưu bền vững vào MySQL.
-  2. Mở file `docker-compose.yml` và mở file `run.bat` (hoặc `start_project_php.bat`) $\rightarrow$ thể hiện khả năng khởi chạy 1-click tự động cả 3 máy chủ (**Tiêu chí 32**).
+  2. Mở file `docker-compose.yml` và mở file `run.bat` $\rightarrow$ thể hiện khả năng khởi chạy 1-click tự động cả 3 máy chủ (**Tiêu chí 32**).
 * **Lời thoại - Thịnh:**
   > *"Cuối cùng là **Tiêu chí 31 và 32**:  
   > Ứng dụng đạt chuẩn PWA với Service Worker và IndexedDB, cho phép đọc, tạo và sửa ghi chú ngay cả khi mất mạng; khi có kết nối trở lại hệ thống sẽ tự động đồng bộ lên MySQL.  

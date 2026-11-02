@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # MySQL Database Service
+  # 1. MySQL Database Service (Port 3306)
   mysql_db:
     image: mysql:8.0
     container_name: tdtu_note_mysql
@@ -15,45 +15,33 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+      - ./backend-php/database.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # Backend RESTful API & WebSocket Service
-  backend:
+  # 2. Backend PHP RESTful API Service (Port 8000)
+  backend_php:
     build:
-      context: ./backend
+      context: ./backend-php
       dockerfile: Dockerfile
-    container_name: tdtu_note_backend
+    container_name: tdtu_note_backend_php
     restart: always
     depends_on:
       mysql_db:
         condition: service_healthy
     environment:
-      NODE_ENV: production
-      PORT: 5000
-      BASE_URL: http://localhost:5000
-      FRONTEND_URL: http://localhost:5173,http://localhost:3000
-      JWT_SECRET: tdtu_web_programming_final_project_jwt_secret_key_2026
-      JWT_EXPIRES_IN: 7d
-      DB_DIALECT: mysql
       DB_HOST: mysql_db
       DB_PORT: 3306
       DB_NAME: tdtu_note_app
       DB_USER: tdtu_user
       DB_PASS: tdtu_password
-      SMTP_HOST: smtp.gmail.com
-      SMTP_PORT: 587
-      SMTP_USER: ""
-      SMTP_PASS: ""
-      SMTP_FROM: "TDTU Note App <noreply@tdtu.edu.vn>"
     ports:
-      - "5000:5000"
+      - "8000:80"
     volumes:
-      - backend_uploads:/app/uploads
+      - ./backend-php:/var/www/html
 
 volumes:
   mysql_data:
-  backend_uploads:

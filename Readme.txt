@@ -32,7 +32,7 @@ I. THÔNG TIN NHÓM & PHÂN CÔNG NHIỆM VỤ (TEAMWORK & DIVISION OF WORK)
      * Dịch vụ Email & OTP 6 số khôi phục mật khẩu (thời hạn 15 phút, chống Replay attack).
      * Xây dựng máy chủ WebSocket (Node.js/Socket.io) phục vụ cộng tác thời gian thực trên ghi chú.
      * Quản lý tệp tin đính kèm đa phương tiện (Ảnh, Video, Tệp tài liệu Word/PDF/ZIP).
-     * Viết kịch bản tự động hóa và tài liệu hướng dẫn triển khai hệ thống (Readme.txt, start_project_php.bat).
+     * Viết kịch bản tự động hóa và tài liệu hướng dẫn triển khai hệ thống (Readme.txt, run.bat, stop.bat).
 
 
 II. TỔNG QUAN KIẾN TRÚC & CÔNG NGHỆ HỆ THỐNG
@@ -72,7 +72,7 @@ BƯỚC 1: KHỞI ĐỘNG VÀ IMPORT CƠ SỞ DỮ LIỆU MYSQL / MARIADB
 
 BƯỚC 2: KHỞI CHẠY HỆ THỐNG
 * Tùy chọn 2.1 (KHUYÊN DÙNG - 1 CLICK TỰ ĐỘNG TOÀN DIỆN):
-  Nhấn đúp chuột vào file run.bat (hoặc start_project_php.bat) tại thư mục gốc của project:
+  Nhấn đúp chuột vào file run.bat tại thư mục gốc của project:
   - Tự động kiểm tra và kết nối CSDL MySQL/MariaDB trên cổng 3306.
   - Tự động phát hiện và cài đặt "npm install" nếu thư mục submission đã được dọn sạch node_modules.
   - Tự động khởi chạy đồng thời cả 3 máy chủ:
