@@ -22,6 +22,16 @@ if !errorlevel! equ 0 (
     sc query MariaDB >nul 2>&1 && net start MariaDB >nul 2>&1
     sc query MySQL >nul 2>&1 && net start MySQL >nul 2>&1
     netstat -ano | findstr ":3306" | findstr "LISTENING" >nul
+    if !errorlevel! neq 0 (
+        if exist "C:\Program Files\MariaDB 13.0\bin\mariadbd.exe" (
+            start "MariaDB-Server" "C:\Program Files\MariaDB 13.0\bin\mariadbd.exe" --console
+        ) else if exist "D:\tools\mariadb\bin\mariadbd.exe" (
+            start "MariaDB-Server" "D:\tools\mariadb\bin\mariadbd.exe" --datadir="D:\tools\mariadb\data" --port=3306 --console
+        ) else if exist "C:\xampp\mysql\bin\mysqld.exe" (
+            start "MySQL-Server" "C:\xampp\mysql\bin\mysqld.exe" --defaults-file="C:\xampp\mysql\bin\my.ini" --standalone
+        )
+    )
+    netstat -ano | findstr ":3306" | findstr "LISTENING" >nul
     if !errorlevel! equ 0 (
         echo     [OK] CSDL MySQL/MariaDB da san sang tren cong 3306.
     ) else (
