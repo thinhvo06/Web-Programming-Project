@@ -71,8 +71,16 @@ BƯỚC 1: KHỞI ĐỘNG VÀ IMPORT CƠ SỞ DỮ LIỆU MYSQL / MARIADB
    - Hoặc mở phpMyAdmin (http://localhost/phpmyadmin), tạo CSDL `tdtu_note_app` và Import file `backend-php/database.sql`.
 
 BƯỚC 2: KHỞI CHẠY HỆ THỐNG
-* Tùy chọn 2.1: Nhấn đúp chuột vào file `start_project_php.bat` tại thư mục gốc của project.
-  (Kịch bản sẽ tự động kiểm tra cổng 3306, chạy PHP Backend port 8000, chạy WebSocket port 5001, và chạy Frontend Vite port 5173).
+* Tùy chọn 2.1 (KHUYÊN DÙNG - 1 CLICK TỰ ĐỘNG TOÀN DIỆN):
+  Nhấn đúp chuột vào file run.bat (hoặc start_project_php.bat) tại thư mục gốc của project:
+  - Tự động kiểm tra và kết nối CSDL MySQL/MariaDB trên cổng 3306.
+  - Tự động phát hiện và cài đặt "npm install" nếu thư mục submission đã được dọn sạch node_modules.
+  - Tự động khởi chạy đồng thời cả 3 máy chủ:
+      + Backend PHP API (cổng 8000)
+      + WebSocket Server (cổng 5001)
+      + Frontend React Vite (cổng 5173)
+  - Tự động mở trình duyệt web tại địa chỉ: http://localhost:5173
+  - Để tắt nhanh toàn bộ các dịch vụ khi chấm xong, chỉ cần nhấn đúp vào file stop.bat.
 
 * Tùy chọn 2.2: Khởi chạy thủ công qua 3 cửa sổ Terminal độc lập:
   - Terminal 1 (Back-End PHP):

@@ -1,15 +1,17 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { INITIAL_NOTES, INITIAL_LABELS } from '../services/mockData';
 import {
   idbGetAll,
   idbPut,
   idbDelete,
   idbBulkPut,
-  idbQueueSync
+  idbQueueSync,
+  idbClearSyncQueue
 } from '../services/indexedDB';
 import { useDebounce } from '../hooks/useDebounce';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useAuth } from './AuthContext';
+import { useToast } from './ToastContext';
 import { api } from '../services/api';
 import { joinNoteRoom, leaveNoteRoom, emitNoteChange, onNoteUpdated } from '../services/socket';
 
@@ -59,6 +61,103 @@ function formatBackendNote(n) {
 export function NoteProvider({ children }) {
   const isOnline = useOnlineStatus();
   const { isAuthenticated } = useAuth();
+
+  const { showSuccess } = useToast();
+  const isSyncingRef = useRef(false);
+
+  // Tiêu chí 31: Đồng bộ hóa dữ liệu ngoại tuyến (Offline Sync Queue) lên MySQL khi có mạng trở lại
+  const flushOfflineSyncQueue = useCallback(async () => {
+    if (!isOnline || !isAuthenticated || isSyncingRef.current) return;
+    isSyncingRef.current = true;
+
+    try {
+      const queue = await idbGetAll('syncQueue');
+      if (!queue || queue.length === 0) {
+        isSyncingRef.current = false;
+        return;
+      }
+
+      console.log(`[PWA Offline Sync] Phát hiện ${queue.length} tác vụ ngoại tuyến cần đồng bộ...`);
+
+      // Nhóm tác vụ theo noteId (giữ trạng thái mới nhất cho mỗi ghi chú)
+      const latestOps = new Map();
+      for (const item of queue) {
+        const noteId = item.payload?.id;
+        if (noteId !== undefined && noteId !== null) {
+          latestOps.set(String(noteId), item);
+        }
+      }
+
+      let syncCount = 0;
+
+      for (const [noteIdStr, item] of latestOps.entries()) {
+        const { action, payload } = item;
+        const isTempId = typeof payload.id === 'string' && payload.id.startsWith('note-');
+
+        if (action === 'DELETE_NOTE') {
+          if (!isTempId) {
+            try {
+              await api.deleteNote(payload.id);
+              syncCount++;
+            } catch (e) {
+              console.warn('[Offline Sync] Lỗi xóa note trên server:', payload.id, e);
+            }
+          }
+          await idbDelete('notes', payload.id);
+        } else if (action === 'SAVE_NOTE') {
+          if (isTempId) {
+            // Tạo note mới trên MySQL
+            try {
+              const res = await api.createNote({
+                title: payload.title || 'Ghi chú không tiêu đề',
+                content: payload.content || '',
+                color: payload.color || 'default',
+                is_pinned: Boolean(payload.isPinned),
+                labels: payload.labels || []
+              });
+
+              if (res && res.success && res.note) {
+                const serverNote = formatBackendNote(res.note);
+                await idbDelete('notes', payload.id);
+                await idbPut('notes', serverNote);
+                setNotes((prev) =>
+                  prev.map((n) => (String(n.id) === String(payload.id) ? serverNote : n))
+                );
+                syncCount++;
+              }
+            } catch (e) {
+              console.warn('[Offline Sync] Lỗi tạo note mới trên server:', payload.id, e);
+            }
+          } else {
+            // Cập nhật note có sẵn trên MySQL
+            try {
+              await api.updateNote(payload.id, {
+                title: payload.title,
+                content: payload.content,
+                color: payload.color,
+                is_pinned: Boolean(payload.isPinned),
+                labels: payload.labels
+              });
+              syncCount++;
+            } catch (e) {
+              console.warn('[Offline Sync] Lỗi cập nhật note trên server:', payload.id, e);
+            }
+          }
+        }
+      }
+
+      await idbClearSyncQueue();
+
+      if (syncCount > 0) {
+        console.log(`[PWA Offline Sync] Đã đồng bộ thành công ${syncCount} ghi chú lên máy chủ.`);
+        showSuccess(`Đã đồng bộ ${syncCount} ghi chú ngoại tuyến lên máy chủ!`);
+      }
+    } catch (err) {
+      console.error('[PWA Offline Sync] Lỗi xử lý đồng bộ ngoại tuyến:', err);
+    } finally {
+      isSyncingRef.current = false;
+    }
+  }, [isOnline, isAuthenticated, showSuccess]);
 
   // State danh sách notes & labels
   const [notes, setNotes] = useState(() => {
@@ -119,6 +218,8 @@ export function NoteProvider({ children }) {
 
     async function loadData() {
       if (isOnline && isAuthenticated) {
+        // Tiêu chí 31: Đẩy dữ liệu ngoại tuyến lên trước khi tải dữ liệu mới từ máy chủ
+        await flushOfflineSyncQueue();
         try {
           const [notesRes, sharedRes, labelsRes] = await Promise.all([
             api.getNotes(),
