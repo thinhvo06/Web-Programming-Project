@@ -84,23 +84,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT' || $_SERVER['REQUEST_METHOD'] === 'PATC
     $update = $pdo->prepare("UPDATE notes SET title = ?, content = ?, color = ?, is_pinned = ?, pinned_at = ?, updated_at = NOW() WHERE id = ?");
     $update->execute([$title, $content, $color, $is_pinned, $pinned_at, $id]);
 
-    // Cập nhật nhãn nếu là owner (hỗ trợ cả label_ids và labels tên dạng chuỗi)
+    // Cập nhật nhãn nếu có quyền chỉnh sửa (hỗ trợ cả label_ids và labels tên dạng chuỗi)
     $final_label_ids = null;
     if (isset($input['label_ids']) && is_array($input['label_ids'])) {
         $final_label_ids = $input['label_ids'];
     } elseif (isset($input['labels']) && is_array($input['labels'])) {
         $final_label_ids = [];
+        $owner_user_id = (int)$note['user_id'];
         foreach ($input['labels'] as $lbl) {
             if (is_numeric($lbl)) {
                 $final_label_ids[] = (int)$lbl;
             } elseif (is_string($lbl) && trim($lbl) !== '') {
                 $lbl_name = trim($lbl);
-                $stmt_find = $pdo->prepare("SELECT id FROM labels WHERE user_id = ? AND name = ?");
-                $stmt_find->execute([$user['id'], $lbl_name]);
+                $stmt_find = $pdo->prepare("SELECT id FROM labels WHERE (user_id = ? OR user_id = ?) AND name = ?");
+                $stmt_find->execute([$owner_user_id, $user['id'], $lbl_name]);
                 $lid = $stmt_find->fetchColumn();
                 if (!$lid) {
                     $stmt_ins = $pdo->prepare("INSERT INTO labels (user_id, name) VALUES (?, ?)");
-                    $stmt_ins->execute([$user['id'], $lbl_name]);
+                    $stmt_ins->execute([$owner_user_id, $lbl_name]);
                     $lid = $pdo->lastInsertId();
                 }
                 $final_label_ids[] = (int)$lid;
@@ -108,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT' || $_SERVER['REQUEST_METHOD'] === 'PATC
         }
     }
 
-    if ($is_owner && $final_label_ids !== null) {
+    if ($can_edit && $final_label_ids !== null) {
         $del = $pdo->prepare("DELETE FROM note_labels WHERE note_id = ?");
         $del->execute([$id]);
 

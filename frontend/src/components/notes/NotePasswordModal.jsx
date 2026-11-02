@@ -14,31 +14,41 @@ export function NotePasswordModal() {
   const { showSuccess } = useToast();
   const [passwordInput, setPasswordInput] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!lockedNotePrompt) return null;
 
   const note = lockedNotePrompt.note;
 
-  const handleUnlock = (e) => {
+  const handleUnlock = async (e) => {
     e.preventDefault();
-    if (!passwordInput.trim()) {
+    const pwd = passwordInput.trim();
+    if (!pwd) {
       setErrorMsg('Vui lòng nhập mật khẩu ghi chú');
       return;
     }
 
-    const success = unlockNoteWithPassword(note.id, passwordInput.trim());
-    if (success) {
-      showSuccess('Mở khóa thành công');
-      const targetAction = lockedNotePrompt.targetAction;
-      setLockedNotePrompt(null);
-      setPasswordInput('');
-      setErrorMsg('');
+    setIsSubmitting(true);
+    try {
+      const res = await unlockNoteWithPassword(note.id, pwd);
+      if (res && res.success) {
+        showSuccess('Mở khóa thành công');
+        const targetAction = lockedNotePrompt.targetAction;
+        const unlockedNote = res.note || { ...note, isUnlocked: true, password: pwd };
+        setLockedNotePrompt(null);
+        setPasswordInput('');
+        setErrorMsg('');
 
-      if (targetAction === 'edit') {
-        openEditNote(note);
+        if (targetAction === 'edit') {
+          openEditNote(unlockedNote);
+        }
+      } else {
+        setErrorMsg(res?.message || 'Mật khẩu không chính xác');
       }
-    } else {
-      setErrorMsg('Mật khẩu không chính xác');
+    } catch (err) {
+      setErrorMsg(err.message || 'Mật khẩu không chính xác');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -66,6 +76,7 @@ export function NotePasswordModal() {
             placeholder="Nhập mật khẩu..."
             className="w-full px-3 py-1.5 text-xs bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
             autoFocus
+            disabled={isSubmitting}
           />
           {errorMsg && (
             <p className="text-xs text-red-600 mt-1">{errorMsg}</p>
@@ -76,15 +87,17 @@ export function NotePasswordModal() {
           <button
             type="button"
             onClick={handleClose}
+            disabled={isSubmitting}
             className="px-3 py-1.5 text-xs text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded"
           >
             Hủy
           </button>
           <button
             type="submit"
-            className="px-3 py-1.5 text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white rounded"
+            disabled={isSubmitting}
+            className="px-3 py-1.5 text-xs font-medium bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded"
           >
-            Mở khóa
+            {isSubmitting ? 'Đang kiểm tra...' : 'Mở khóa'}
           </button>
         </div>
       </form>

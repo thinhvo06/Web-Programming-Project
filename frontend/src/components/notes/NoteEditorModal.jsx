@@ -67,6 +67,7 @@ export function NoteEditorModal() {
     saveNoteAuto,
     saveStatus,
     labels,
+    addLabel,
     setNoteToDelete,
     setNoteToShare
   } = useNotes();
@@ -93,6 +94,7 @@ export function NoteEditorModal() {
 
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showLabelPicker, setShowLabelPicker] = useState(false);
+  const [newLabelInput, setNewLabelInput] = useState('');
   const [validationError, setValidationError] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -292,13 +294,51 @@ export function NoteEditorModal() {
 
   const handleToggleLabel = (labelName) => {
     let nextLabels;
-    if (noteLabels.includes(labelName)) {
-      nextLabels = noteLabels.filter((l) => l !== labelName);
+    const currentNormalized = (noteLabels || []).map((l) => (typeof l === 'string' ? l : l.name));
+    if (currentNormalized.includes(labelName)) {
+      nextLabels = currentNormalized.filter((l) => l !== labelName);
     } else {
-      nextLabels = [...noteLabels, labelName];
+      nextLabels = [...currentNormalized, labelName];
     }
     setNoteLabels(nextLabels);
-    triggerAutoSave({ noteLabels: nextLabels });
+    saveNoteAuto({
+      ...editingNote,
+      title,
+      content,
+      color,
+      isPinned,
+      labels: nextLabels,
+      attachments
+    });
+  };
+
+  const handleCreateAndAttachLabel = () => {
+    const trimmed = newLabelInput.trim();
+    if (!trimmed) return;
+
+    const existsInAll = labels.some(
+      (l) => (typeof l === 'string' ? l : l.name).toLowerCase() === trimmed.toLowerCase()
+    );
+    if (!existsInAll) {
+      addLabel(trimmed);
+    }
+
+    const currentNormalized = (noteLabels || []).map((l) => (typeof l === 'string' ? l : l.name));
+    if (!currentNormalized.includes(trimmed)) {
+      const nextLabels = [...currentNormalized, trimmed];
+      setNoteLabels(nextLabels);
+      saveNoteAuto({
+        ...editingNote,
+        title,
+        content,
+        color,
+        isPinned,
+        labels: nextLabels,
+        attachments
+      });
+      showSuccess(`Đã gắn nhãn "${trimmed}" vào ghi chú`);
+    }
+    setNewLabelInput('');
   };
 
   const handleFileUpload = (e) => {
@@ -704,21 +744,25 @@ export function NoteEditorModal() {
           {/* Danh sách nhãn */}
           {noteLabels.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 pt-1">
-              {noteLabels.map((lbl, idx) => (
-                <span
-                  key={idx}
-                  className="inline-flex items-center gap-1 text-xs bg-black/5 dark:bg-white/10 text-zinc-700 dark:text-zinc-300 px-2 py-0.5 rounded"
-                >
-                  #{lbl}
-                  <button
-                    onClick={() => handleToggleLabel(lbl)}
-                    className="hover:text-red-600 rounded"
-                    title={`Gỡ nhãn ${lbl}`}
+              {noteLabels.map((lbl, idx) => {
+                const labelText = typeof lbl === 'string' ? lbl : lbl.name;
+                return (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center gap-1 text-xs bg-black/5 dark:bg-white/10 text-zinc-700 dark:text-zinc-300 px-2 py-0.5 rounded"
                   >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              ))}
+                    #{labelText}
+                    <button
+                      type="button"
+                      onClick={() => handleToggleLabel(labelText)}
+                      className="hover:text-red-600 rounded"
+                      title={`Gỡ nhãn ${labelText}`}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                );
+              })}
             </div>
           )}
         </div>
@@ -775,29 +819,63 @@ export function NoteEditorModal() {
               </button>
 
               {showLabelPicker && (
-                <div className="absolute bottom-full mb-1 left-0 w-44 p-1.5 bg-white dark:bg-zinc-800 rounded-md shadow-md border border-zinc-200 dark:border-zinc-700 z-20 space-y-0.5">
-                  <span className="text-[10px] font-semibold uppercase text-zinc-400 px-2 block">
-                    Gắn nhãn
+                <div className="absolute bottom-full mb-1 left-0 w-52 p-2 bg-white dark:bg-zinc-800 rounded-lg shadow-xl border border-zinc-200 dark:border-zinc-700 z-30 space-y-1.5">
+                  <span className="text-[10px] font-semibold uppercase text-zinc-400 px-1 block">
+                    Gắn nhãn ghi chú
                   </span>
-                  {labels.length === 0 ? (
-                    <p className="text-xs text-zinc-400 px-2 py-1">Chưa có nhãn</p>
-                  ) : (
-                    labels.map((lbl) => {
-                      const isChecked = noteLabels.includes(lbl.name);
-                      return (
-                        <button
-                          key={lbl.id}
-                          onClick={() => handleToggleLabel(lbl.name)}
-                          className="w-full flex items-center justify-between px-2 py-1 rounded text-xs hover:bg-zinc-100 dark:hover:bg-zinc-700 text-left"
-                        >
-                          <span className="truncate text-zinc-700 dark:text-zinc-300">
-                            #{lbl.name}
-                          </span>
-                          {isChecked && <Check className="w-3.5 h-3.5 text-blue-600" />}
-                        </button>
-                      );
-                    })
-                  )}
+
+                  {/* Nhập tạo nhãn mới trực tiếp */}
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="text"
+                      value={newLabelInput}
+                      onChange={(e) => setNewLabelInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleCreateAndAttachLabel();
+                        }
+                      }}
+                      placeholder="Nhập tên nhãn..."
+                      className="w-full px-2 py-1 text-xs bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                    {newLabelInput.trim() && (
+                      <button
+                        type="button"
+                        onClick={handleCreateAndAttachLabel}
+                        className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium shrink-0"
+                        title="Tạo và gắn nhãn"
+                      >
+                        +
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="max-h-40 overflow-y-auto space-y-0.5 pt-1">
+                    {labels.length === 0 ? (
+                      <p className="text-xs text-zinc-400 px-1 py-1">Chưa có nhãn</p>
+                    ) : (
+                      labels.map((lbl) => {
+                        const lblName = typeof lbl === 'string' ? lbl : lbl.name;
+                        const isChecked = (noteLabels || []).some(
+                          (l) => (typeof l === 'string' ? l : l.name) === lblName
+                        );
+                        return (
+                          <button
+                            key={lbl.id || lblName}
+                            type="button"
+                            onClick={() => handleToggleLabel(lblName)}
+                            className="w-full flex items-center justify-between px-2 py-1.5 rounded text-xs hover:bg-zinc-100 dark:hover:bg-zinc-700 text-left transition-colors"
+                          >
+                            <span className="truncate text-zinc-700 dark:text-zinc-300">
+                              #{lblName}
+                            </span>
+                            {isChecked && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
               )}
             </div>

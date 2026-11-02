@@ -22,7 +22,7 @@ export function NoteCard({ note }) {
     debouncedSearchQuery
   } = useNotes();
 
-  const isUnlocked = !note.isLocked || unlockedNoteIds.has(note.id);
+  const isUnlocked = !note.isLocked || Boolean(note.isUnlocked) || unlockedNoteIds.has(note.id) || unlockedNoteIds.has(String(note.id)) || unlockedNoteIds.has(Number(note.id));
   const colorObj = NOTE_COLORS.find((c) => c.id === note.color) || NOTE_COLORS[0];
 
   const handleDelete = (e) => {
@@ -94,14 +94,17 @@ export function NoteCard({ note }) {
               </span>
             )}
             {note.labels &&
-              note.labels.map((lbl, idx) => (
-                <span
-                  key={idx}
-                  className="text-[11px] bg-black/5 dark:bg-white/10 text-zinc-700 dark:text-zinc-300 px-1.5 py-0.2 rounded"
-                >
-                  #{lbl}
-                </span>
-              ))}
+              note.labels.map((lbl, idx) => {
+                const name = typeof lbl === 'string' ? lbl : lbl.name;
+                return (
+                  <span
+                    key={idx}
+                    className="text-[11px] bg-black/5 dark:bg-white/10 text-zinc-700 dark:text-zinc-300 px-1.5 py-0.2 rounded"
+                  >
+                    #{name}
+                  </span>
+                );
+              })}
             {note.attachments && note.attachments.length > 0 && (
               <span className="text-[11px] text-zinc-400 flex items-center gap-1">
                 <Paperclip className="w-3 h-3" />
@@ -218,14 +221,17 @@ export function NoteCard({ note }) {
       <div className="pt-2 border-t border-black/5 dark:border-white/10">
         {note.labels && note.labels.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-2">
-            {note.labels.map((lbl, idx) => (
-              <span
-                key={idx}
-                className="text-[10px] bg-black/5 dark:bg-white/10 text-zinc-600 dark:text-zinc-400 px-1.5 py-0.2 rounded"
-              >
-                #{lbl}
-              </span>
-            ))}
+            {note.labels.map((lbl, idx) => {
+              const name = typeof lbl === 'string' ? lbl : lbl.name;
+              return (
+                <span
+                  key={idx}
+                  className="text-[10px] bg-black/5 dark:bg-white/10 text-zinc-600 dark:text-zinc-400 px-1.5 py-0.2 rounded"
+                >
+                  #{name}
+                </span>
+              );
+            })}
           </div>
         )}
 

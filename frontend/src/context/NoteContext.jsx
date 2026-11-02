@@ -400,11 +400,17 @@ export function NoteProvider({ children }) {
 
   // Mở màn hình sửa note
   const openEditNote = useCallback((note) => {
-    if (note.isLocked && !unlockedNoteIds.has(note.id)) {
+    const isUnlocked =
+      !note.isLocked ||
+      note.isUnlocked ||
+      unlockedNoteIds.has(note.id) ||
+      unlockedNoteIds.has(String(note.id)) ||
+      unlockedNoteIds.has(Number(note.id));
+    if (!isUnlocked) {
       setLockedNotePrompt({ note, targetAction: 'edit' });
       return;
     }
-    setEditingNote({ ...note, isNew: false });
+    setEditingNote({ ...note, isNew: false, isUnlocked: true });
     setIsEditorOpen(true);
   }, [unlockedNoteIds]);
 
@@ -431,6 +437,13 @@ export function NoteProvider({ children }) {
       } else {
         return [updatedNote, ...prevNotes];
       }
+    });
+
+    setEditingNote((current) => {
+      if (current && String(current.id) === String(updatedNote.id)) {
+        return { ...current, ...updatedNote };
+      }
+      return current;
     });
 
     try {
@@ -657,30 +670,58 @@ export function NoteProvider({ children }) {
         try {
           const res = await api.unlockNote(noteId, inputPassword);
           if (res && res.success) {
-            setUnlockedNoteIds((prev) => new Set(prev).add(noteId));
-            if (res.note && res.note.content) {
-              setNotes((prev) =>
-                prev.map((n) =>
-                  n.id === noteId
-                    ? { ...n, content: res.note.content, isUnlocked: true }
-                    : n
-                )
-              );
-            }
-            return true;
+            setUnlockedNoteIds((prev) => {
+              const next = new Set(prev);
+              next.add(noteId);
+              next.add(String(noteId));
+              next.add(Number(noteId));
+              return next;
+            });
+            const content = res.note?.content ?? '';
+            setNotes((prev) =>
+              prev.map((n) =>
+                String(n.id) === String(noteId)
+                  ? { ...n, content, isUnlocked: true, password: inputPassword }
+                  : n
+              )
+            );
+            const found = notes.find((n) => String(n.id) === String(noteId));
+            return {
+              success: true,
+              note: {
+                ...(found || {}),
+                content,
+                isUnlocked: true,
+                password: inputPassword
+              }
+            };
           }
         } catch (err) {
           console.warn('Lỗi unlockNote qua API:', err);
+          return { success: false, message: err.message || 'Mật khẩu không chính xác' };
         }
       }
     }
 
-    const note = notes.find((n) => n.id === noteId);
+    const note = notes.find((n) => String(n.id) === String(noteId));
     if (note && note.password === inputPassword) {
-      setUnlockedNoteIds((prev) => new Set(prev).add(noteId));
-      return true;
+      setUnlockedNoteIds((prev) => {
+        const next = new Set(prev);
+        next.add(noteId);
+        next.add(String(noteId));
+        next.add(Number(noteId));
+        return next;
+      });
+      setNotes((prev) =>
+        prev.map((n) =>
+          String(n.id) === String(noteId)
+            ? { ...n, isUnlocked: true }
+            : n
+        )
+      );
+      return { success: true, note: { ...note, isUnlocked: true } };
     }
-    return false;
+    return { success: false, message: 'Mật khẩu không chính xác' };
   }, [notes, isOnline, isAuthenticated]);
 
   const enableNotePassword = useCallback(async (noteId, newPassword) => {

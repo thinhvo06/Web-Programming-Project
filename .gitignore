@@ -21,3 +21,4 @@ backend/uploads/attachments/*
 backend-php/realtime-socket/node_modules/
 backend-php/logs/
 ~$*
+__pycache__/
