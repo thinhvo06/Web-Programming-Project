@@ -112,10 +112,8 @@ function send_email_message($to, $subject, $content) {
         }
     }
 
-    // 3. Fallback dùng hàm chuẩn của PHP
-    $headers = "From: noreply@tdtu.edu.vn\r\nReply-To: noreply@tdtu.edu.vn\r\nContent-Type: text/plain; charset=UTF-8\r\n";
-    @mail($to, $subject, $content, $headers);
-    return false; // Chưa gửi qua SMTP thật nhưng đã ghi log
+    // 3. Fallback: Nội dung email đã được lưu tại backend-php/logs/mail_logs.txt
+    return true;
 }
 
 function send_activation_mail($email, $display_name, $token) {

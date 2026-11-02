@@ -1,7 +1,8 @@
 import { io } from 'socket.io-client';
 
 let socket = null;
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+const rawSocketUrl = import.meta.env.VITE_SOCKET_URL || 'http://127.0.0.1:5001';
+const SOCKET_URL = rawSocketUrl.replace('//localhost:', '//127.0.0.1:');
 
 export function getSocket() {
   const token = localStorage.getItem('noteapp_token');

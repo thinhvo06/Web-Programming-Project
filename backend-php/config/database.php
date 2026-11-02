@@ -22,7 +22,10 @@ try {
         PDO::ATTR_EMULATE_PREPARES   => false,
     ]);
 } catch (PDOException $e) {
-    // Trả về lỗi nếu không kết nối được DB
+    // Trả về lỗi nếu không kết nối được DB (kèm CORS header để trình duyệt không bị lỗi Failed to fetch)
+    header("Access-Control-Allow-Origin: *");
+    header("Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS");
+    header("Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Accept, Authorization");
     header('Content-Type: application/json; charset=UTF-8');
     http_response_code(500);
     echo json_encode([

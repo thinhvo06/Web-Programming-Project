@@ -1,6 +1,20 @@
 // Đồng bộ 100% theo tài liệu bàn giao Backend (API & Socket Contract) của bạn BE
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// Chuẩn hóa localhost -> 127.0.0.1 để tránh lỗi phân giải IPv6 (::1) trên Windows khiến fetch bị Failed to fetch
+const rawApiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
+const API_BASE_URL = rawApiUrl.replace('//localhost:', '//127.0.0.1:');
 const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false';
+
+// Bọc fetch để có thông báo lỗi kết nối rõ ràng khi Backend PHP chưa chạy
+async function safeFetch(url, options = {}) {
+  try {
+    return await safeFetch(url, options);
+  } catch (err) {
+    if (err.name === 'TypeError' || err.message === 'Failed to fetch') {
+      throw new Error('Không thể kết nối đến máy chủ Backend (http://127.0.0.1:8000). Vui lòng kiểm tra backend PHP/XAMPP đã được bật chưa!');
+    }
+    throw err;
+  }
+}
 
 function getAuthHeader() {
   const token = localStorage.getItem('noteapp_token');
@@ -11,7 +25,7 @@ export const api = {
   // ================= 1. XÁC THỰC (AUTH) =================
   async register({ email, displayName, password }) {
     if (!USE_MOCK) {
-      const res = await fetch(`${API_BASE_URL}/auth/register`, {
+      const res = await safeFetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -50,7 +64,7 @@ export const api = {
 
   async login({ email, password }) {
     if (!USE_MOCK) {
-      const res = await fetch(`${API_BASE_URL}/auth/login`, {
+      const res = await safeFetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -84,7 +98,7 @@ export const api = {
 
   async activateAccount(token = 'sample-token') {
     if (!USE_MOCK) {
-      const res = await fetch(`${API_BASE_URL}/auth/activate/${token}`, {
+      const res = await safeFetch(`${API_BASE_URL}/auth/activate/${token}`, {
         headers: getAuthHeader()
       });
       return res.json();
@@ -95,7 +109,7 @@ export const api = {
 
   async forgotPassword(email) {
     if (!USE_MOCK) {
-      const res = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+      const res = await safeFetch(`${API_BASE_URL}/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
@@ -110,7 +124,7 @@ export const api = {
 
   async resetPassword({ email, otp, newPassword }) {
     if (!USE_MOCK) {
-      const res = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+      const res = await safeFetch(`${API_BASE_URL}/auth/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -141,7 +155,7 @@ export const api = {
         formData.append('avatar', avatar);
       }
 
-      const res = await fetch(`${API_BASE_URL}/users/profile`, {
+      const res = await safeFetch(`${API_BASE_URL}/users/profile`, {
         method: 'POST',
         headers: getAuthHeader(),
         body: formData
@@ -155,7 +169,7 @@ export const api = {
 
   async changePassword(userId, { currentPassword, newPassword }) {
     if (!USE_MOCK) {
-      const res = await fetch(`${API_BASE_URL}/users/change-password`, {
+      const res = await safeFetch(`${API_BASE_URL}/users/change-password`, {
         method: 'PUT',
         headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -174,7 +188,7 @@ export const api = {
 
   async updatePreferences(userId, preferences) {
     if (!USE_MOCK) {
-      await fetch(`${API_BASE_URL}/users/preferences`, {
+      await safeFetch(`${API_BASE_URL}/users/preferences`, {
         method: 'PUT',
         headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
         body: JSON.stringify(preferences)
@@ -187,7 +201,7 @@ export const api = {
   async getNotes(params = {}) {
     if (!USE_MOCK) {
       const query = new URLSearchParams(params).toString();
-      const res = await fetch(`${API_BASE_URL}/notes?${query}`, {
+      const res = await safeFetch(`${API_BASE_URL}/notes?${query}`, {
         headers: getAuthHeader()
       });
       return res.json();
@@ -197,7 +211,7 @@ export const api = {
 
   async createNote(noteData) {
     if (!USE_MOCK) {
-      const res = await fetch(`${API_BASE_URL}/notes`, {
+      const res = await safeFetch(`${API_BASE_URL}/notes`, {
         method: 'POST',
         headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
         body: JSON.stringify(noteData)
@@ -209,7 +223,7 @@ export const api = {
 
   async updateNote(id, noteData) {
     if (!USE_MOCK) {
-      const res = await fetch(`${API_BASE_URL}/notes/${id}`, {
+      const res = await safeFetch(`${API_BASE_URL}/notes/${id}`, {
         method: 'PUT',
         headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
         body: JSON.stringify(noteData)
@@ -221,7 +235,7 @@ export const api = {
 
   async deleteNote(id, password = null) {
     if (!USE_MOCK) {
-      const res = await fetch(`${API_BASE_URL}/notes/${id}`, {
+      const res = await safeFetch(`${API_BASE_URL}/notes/${id}`, {
         method: 'DELETE',
         headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ password })
@@ -233,7 +247,7 @@ export const api = {
 
   async togglePin(id) {
     if (!USE_MOCK) {
-      const res = await fetch(`${API_BASE_URL}/notes/${id}/pin`, {
+      const res = await safeFetch(`${API_BASE_URL}/notes/${id}/pin`, {
         method: 'PATCH',
         headers: getAuthHeader()
       });
@@ -245,7 +259,7 @@ export const api = {
   // ================= 4. KHÓA MẬT KHẨU NOTE =================
   async lockNote(id, password) {
     if (!USE_MOCK) {
-      const res = await fetch(`${API_BASE_URL}/notes/${id}/lock`, {
+      const res = await safeFetch(`${API_BASE_URL}/notes/${id}/lock`, {
         method: 'POST',
         headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ password, confirm_password: password })
@@ -257,7 +271,7 @@ export const api = {
 
   async unlockNote(id, password) {
     if (!USE_MOCK) {
-      const res = await fetch(`${API_BASE_URL}/notes/${id}/unlock`, {
+      const res = await safeFetch(`${API_BASE_URL}/notes/${id}/unlock`, {
         method: 'POST',
         headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ password })
@@ -271,7 +285,7 @@ export const api = {
 
   async disableLock(id, currentPassword) {
     if (!USE_MOCK) {
-      const res = await fetch(`${API_BASE_URL}/notes/${id}/disable-lock`, {
+      const res = await safeFetch(`${API_BASE_URL}/notes/${id}/disable-lock`, {
         method: 'POST',
         headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ current_password: currentPassword })
@@ -286,7 +300,7 @@ export const api = {
   // ================= 5. CHIA SẺ NOTE =================
   async shareNote(id, email, permission = 'read') {
     if (!USE_MOCK) {
-      const res = await fetch(`${API_BASE_URL}/shares/notes/${id}/share`, {
+      const res = await safeFetch(`${API_BASE_URL}/shares/notes/${id}/share`, {
         method: 'POST',
         headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, permission })
@@ -302,7 +316,7 @@ export const api = {
 
   async revokeShare(shareId) {
     if (!USE_MOCK) {
-      const res = await fetch(`${API_BASE_URL}/shares/${shareId}`, {
+      const res = await safeFetch(`${API_BASE_URL}/shares/${shareId}`, {
         method: 'DELETE',
         headers: getAuthHeader()
       });
@@ -313,7 +327,7 @@ export const api = {
 
   async revokeShareByEmail(noteId, email) {
     if (!USE_MOCK) {
-      const res = await fetch(`${API_BASE_URL}/shares/notes/${noteId}/share`, {
+      const res = await safeFetch(`${API_BASE_URL}/shares/notes/${noteId}/share`, {
         method: 'DELETE',
         headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
@@ -329,7 +343,7 @@ export const api = {
 
   async getSharedWithMe() {
     if (!USE_MOCK) {
-      const res = await fetch(`${API_BASE_URL}/shares/shared-with-me`, {
+      const res = await safeFetch(`${API_BASE_URL}/shares/shared-with-me`, {
         headers: getAuthHeader()
       });
       return res.json();
@@ -340,7 +354,7 @@ export const api = {
   // ================= 6. NHÃN (LABELS) =================
   async getLabels() {
     if (!USE_MOCK) {
-      const res = await fetch(`${API_BASE_URL}/labels`, {
+      const res = await safeFetch(`${API_BASE_URL}/labels`, {
         headers: getAuthHeader()
       });
       return res.json();
@@ -350,7 +364,7 @@ export const api = {
 
   async createLabel(name) {
     if (!USE_MOCK) {
-      const res = await fetch(`${API_BASE_URL}/labels`, {
+      const res = await safeFetch(`${API_BASE_URL}/labels`, {
         method: 'POST',
         headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ name })
@@ -362,7 +376,7 @@ export const api = {
 
   async renameLabel(id, name) {
     if (!USE_MOCK) {
-      const res = await fetch(`${API_BASE_URL}/labels/${id}`, {
+      const res = await safeFetch(`${API_BASE_URL}/labels/${id}`, {
         method: 'PUT',
         headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ name })
@@ -374,7 +388,7 @@ export const api = {
 
   async deleteLabel(id) {
     if (!USE_MOCK) {
-      const res = await fetch(`${API_BASE_URL}/labels/${id}`, {
+      const res = await safeFetch(`${API_BASE_URL}/labels/${id}`, {
         method: 'DELETE',
         headers: getAuthHeader()
       });
