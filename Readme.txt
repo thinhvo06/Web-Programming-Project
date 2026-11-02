@@ -9,8 +9,8 @@ Repository GitHub: https://github.com/thinhvo06/Web-Programming-Project.git
 I. THÔNG TIN NHÓM & PHÂN CÔNG NHIỆM VỤ (TEAMWORK & DIVISION OF WORK)
 --------------------------------------------------------------------------------
 1. THÀNH VIÊN 1: FRONT-END, UI/UX & PWA OFFLINE
-   - Họ và tên: [Điền Họ và tên Thành viên 1]
-   - Mã số sinh viên: [Điền MSSV Thành viên 1]
+   - Họ và tên: Nguyễn Nhật Huy
+   - Mã số sinh viên: 524H0052
    - Vai trò chính:
      * Xây dựng giao diện ứng dụng (SPA / PWA) bằng React 18, Vite, Tailwind CSS.
      * Thiết kế Layout chuyển đổi linh hoạt: Dạng dòng (List View) và Dạng lưới (Grid View).
@@ -22,8 +22,8 @@ I. THÔNG TIN NHÓM & PHÂN CÔNG NHIỆM VỤ (TEAMWORK & DIVISION OF WORK)
      * Giao diện cộng tác thời gian thực (Real-time Collaboration Editor).
 
 2. THÀNH VIÊN 2: BACK-END, CSDL, REALTIME WEBSOCKET & DEVOPS
-   - Họ và tên: [Điền Họ và tên Thành viên 2]
-   - Mã số sinh viên: [Điền MSSV Thành viên 2]
+   - Họ và tên: Võ Nguyễn Phúc Thịnh
+   - Mã số sinh viên: 524H0069
    - Vai trò chính:
      * Xây dựng kiến trúc RESTful API bằng PHP thuần (Vanilla/Core PHP 8.x).
      * Thiết kế CSDL quan hệ MySQL/MariaDB chuẩn hóa 3NF, bảo mật PDO Prepared Statements (100% chống SQL Injection).
