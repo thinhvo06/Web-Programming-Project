@@ -276,6 +276,24 @@ export const api = {
     return { success: true };
   },
 
+  async changeNotePassword(id, currentPassword, newPassword, confirmPassword = newPassword) {
+    if (!USE_MOCK) {
+      const res = await safeFetch(`${API_BASE_URL}/notes/${id}/change-password`, {
+        method: 'POST',
+        headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword,
+          confirm_password: confirmPassword
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Đổi mật khẩu thất bại');
+      return data;
+    }
+    return { success: true };
+  },
+
   // ================= 5. CHIA SẺ NOTE =================
   async shareNote(id, email, permission = 'read') {
     if (!USE_MOCK) {

@@ -33,6 +33,7 @@ import {
   Users,
   ListTodo,
   Share2,
+  Key,
   Eye,
   MousePointer2,
   Maximize2,
@@ -69,7 +70,11 @@ export function NoteEditorModal() {
     labels,
     addLabel,
     setNoteToDelete,
-    setNoteToShare
+    setNoteToShare,
+    setEditingNote,
+    enableNotePassword,
+    disableNotePassword,
+    changeNotePassword
   } = useNotes();
 
   const { user: currentUser } = useAuth();
@@ -99,9 +104,12 @@ export function NoteEditorModal() {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const [showPasswordSetup, setShowPasswordSetup] = useState(false);
-  const [pass1, setPass1] = useState('');
-  const [pass2, setPass2] = useState('');
-  const [currentPassForDisable, setCurrentPassForDisable] = useState('');
+  const [passwordSetupTab, setPasswordSetupTab] = useState('change'); // 'change' | 'disable'
+  const [currentPass, setCurrentPass] = useState('');
+  const [newPass1, setNewPass1] = useState('');
+  const [newPass2, setNewPass2] = useState('');
+  const [passSubmitting, setPassSubmitting] = useState(false);
+  const [passError, setPassError] = useState('');
 
   const fileInputRef = useRef(null);
   const titleInputRef = useRef(null);
@@ -376,45 +384,115 @@ export function NoteEditorModal() {
     triggerAutoSave({ attachments: updated });
   };
 
-  const handleEnablePassword = (e) => {
+  const handleEnablePassword = async (e) => {
     e.preventDefault();
-    if (!pass1) {
-      showError('Vui lòng nhập mật khẩu');
+    setPassError('');
+    if (!newPass1) {
+      setPassError('Vui lòng nhập mật khẩu ghi chú');
       return;
     }
-    if (pass1 !== pass2) {
-      showError('Mật khẩu xác nhận lần 2 không khớp');
+    if (newPass1.length < 4) {
+      setPassError('Mật khẩu ghi chú tối thiểu 4 ký tự');
       return;
     }
-    const updated = {
-      ...editingNote,
-      password: pass1,
-      isLocked: true,
-      updatedAt: new Date().toISOString()
-    };
-    saveNoteAuto(updated);
-    setShowPasswordSetup(false);
-    setPass1('');
-    setPass2('');
-    showSuccess('Đã khóa ghi chú bằng mật khẩu');
+    if (newPass1 !== newPass2) {
+      setPassError('Mật khẩu xác nhận không khớp');
+      return;
+    }
+
+    setPassSubmitting(true);
+    try {
+      await enableNotePassword(editingNote.id, newPass1);
+      const updated = {
+        ...editingNote,
+        password: newPass1,
+        isLocked: true,
+        isUnlocked: true,
+        updatedAt: new Date().toISOString()
+      };
+      if (setEditingNote) setEditingNote(updated);
+      setShowPasswordSetup(false);
+      setNewPass1('');
+      setNewPass2('');
+      showSuccess('Đã đặt mật khẩu khóa ghi chú thành công');
+    } catch (err) {
+      setPassError(err.message || 'Không thể đặt mật khẩu');
+    } finally {
+      setPassSubmitting(false);
+    }
   };
 
-  const handleDisablePassword = (e) => {
+  const handleChangePassword = async (e) => {
     e.preventDefault();
-    if (currentPassForDisable !== editingNote.password) {
-      showError('Mật khẩu hiện tại không đúng');
+    setPassError('');
+    if (!currentPass) {
+      setPassError('Vui lòng nhập mật khẩu hiện tại');
       return;
     }
-    const updated = {
-      ...editingNote,
-      password: null,
-      isLocked: false,
-      updatedAt: new Date().toISOString()
-    };
-    saveNoteAuto(updated);
-    setShowPasswordSetup(false);
-    setCurrentPassForDisable('');
-    showSuccess('Đã gỡ bỏ mật khẩu bảo vệ');
+    if (!newPass1) {
+      setPassError('Vui lòng nhập mật khẩu mới');
+      return;
+    }
+    if (newPass1.length < 4) {
+      setPassError('Mật khẩu mới tối thiểu 4 ký tự');
+      return;
+    }
+    if (newPass1 !== newPass2) {
+      setPassError('Mật khẩu mới xác nhận không khớp');
+      return;
+    }
+
+    setPassSubmitting(true);
+    try {
+      await changeNotePassword(editingNote.id, currentPass, newPass1, newPass2);
+      const updated = {
+        ...editingNote,
+        password: newPass1,
+        isLocked: true,
+        isUnlocked: true,
+        updatedAt: new Date().toISOString()
+      };
+      if (setEditingNote) setEditingNote(updated);
+      setShowPasswordSetup(false);
+      setCurrentPass('');
+      setNewPass1('');
+      setNewPass2('');
+      showSuccess('Đổi mật khẩu ghi chú thành công!');
+    } catch (err) {
+      setPassError(err.message || 'Mật khẩu hiện tại không chính xác');
+    } finally {
+      setPassSubmitting(false);
+    }
+  };
+
+  const handleDisablePassword = async (e) => {
+    e.preventDefault();
+    setPassError('');
+    if (!currentPass) {
+      setPassError('Vui lòng nhập mật khẩu hiện tại');
+      return;
+    }
+
+    setPassSubmitting(true);
+    try {
+      await disableNotePassword(editingNote.id, currentPass);
+      const updated = {
+        ...editingNote,
+        password: null,
+        isLocked: false,
+        isUnlocked: true,
+        updatedAt: new Date().toISOString()
+      };
+      saveNoteAuto(updated);
+      if (setEditingNote) setEditingNote(updated);
+      setShowPasswordSetup(false);
+      setCurrentPass('');
+      showSuccess('Đã hủy bảo vệ mật khẩu cho ghi chú này!');
+    } catch (err) {
+      setPassError(err.message || 'Mật khẩu hiện tại không chính xác');
+    } finally {
+      setPassSubmitting(false);
+    }
   };
 
   const handleClose = () => {
@@ -938,76 +1016,239 @@ export function NoteEditorModal() {
         </div>
       </div>
 
-      {/* POPUP THIẾT LẬP MẬT KHẨU GHI CHÚ */}
+      {/* POPUP QUẢN LÝ / THIẾT LẬP MẬT KHẨU GHI CHÚ */}
       {showPasswordSetup && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/40" onClick={() => setShowPasswordSetup(false)} />
-          <div className="relative w-full max-w-sm bg-white dark:bg-zinc-900 rounded-md shadow-md p-4 border border-zinc-200 dark:border-zinc-800 z-10">
-            <h4 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
-              {editingNote.isLocked ? 'Gỡ bỏ mật khẩu bảo vệ' : 'Đặt mật khẩu cho ghi chú'}
-            </h4>
-            <p className="text-xs text-zinc-500 mb-3">
-              {editingNote.isLocked
-                ? 'Nhập đúng mật khẩu hiện tại để hủy bảo vệ.'
-                : 'Mỗi ghi chú có thể đặt mật khẩu riêng. Nhập 2 lần để tránh gõ nhầm.'}
-            </p>
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-xs"
+            onClick={() => {
+              if (!passSubmitting) {
+                setShowPasswordSetup(false);
+                setPassError('');
+                setCurrentPass('');
+                setNewPass1('');
+                setNewPass2('');
+              }
+            }}
+          />
+          <div className="relative w-full max-w-sm bg-white dark:bg-zinc-900 rounded-lg shadow-xl p-5 border border-zinc-200 dark:border-zinc-800 z-10">
+            {/* Header */}
+            <div className="flex items-center gap-2 mb-3">
+              <div className={`p-2 rounded-full ${editingNote.isLocked ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-600' : 'bg-blue-100 dark:bg-blue-950/60 text-blue-600'}`}>
+                {editingNote.isLocked ? <Key className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                  {editingNote.isLocked ? 'Bảo mật ghi chú' : 'Đặt mật khẩu cho ghi chú'}
+                </h4>
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                  {editingNote.isLocked ? 'Đổi mật khẩu hoặc gỡ bỏ bảo vệ' : 'Mỗi ghi chú có mật khẩu riêng biệt'}
+                </p>
+              </div>
+            </div>
+
+            {/* Error Message Alert */}
+            {passError && (
+              <div className="mb-3 p-2 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-300 text-xs rounded-md">
+                {passError}
+              </div>
+            )}
 
             {editingNote.isLocked ? (
-              <form onSubmit={handleDisablePassword} className="space-y-2.5">
-                <input
-                  type="password"
-                  value={currentPassForDisable}
-                  onChange={(e) => setCurrentPassForDisable(e.target.value)}
-                  placeholder="Mật khẩu hiện tại..."
-                  className="w-full px-3 py-1.5 bg-zinc-50 dark:bg-zinc-800 text-xs border border-zinc-300 dark:border-zinc-700 rounded focus:outline-none"
-                  autoFocus
-                />
-                <div className="flex justify-end gap-2 pt-1">
+              <div>
+                {/* 2 Tabs: Đổi mật khẩu | Hủy bảo vệ */}
+                <div className="flex border-b border-zinc-200 dark:border-zinc-800 mb-3 text-xs font-medium">
                   <button
                     type="button"
-                    onClick={() => setShowPasswordSetup(false)}
-                    className="px-3 py-1 text-xs text-zinc-600"
+                    onClick={() => {
+                      setPasswordSetupTab('change');
+                      setPassError('');
+                    }}
+                    className={`flex-1 pb-2 text-center transition-colors border-b-2 ${
+                      passwordSetupTab === 'change'
+                        ? 'border-blue-600 text-blue-600 dark:text-blue-400 font-semibold'
+                        : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
+                    }`}
                   >
-                    Hủy
+                    Đổi mật khẩu
                   </button>
                   <button
-                    type="submit"
-                    className="px-3 py-1 text-xs bg-red-600 text-white rounded font-medium"
+                    type="button"
+                    onClick={() => {
+                      setPasswordSetupTab('disable');
+                      setPassError('');
+                    }}
+                    className={`flex-1 pb-2 text-center transition-colors border-b-2 ${
+                      passwordSetupTab === 'disable'
+                        ? 'border-red-600 text-red-600 dark:text-red-400 font-semibold'
+                        : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
+                    }`}
                   >
-                    Xác nhận hủy
+                    Hủy khóa bảo vệ
                   </button>
                 </div>
-              </form>
+
+                {passwordSetupTab === 'change' ? (
+                  <form onSubmit={handleChangePassword} className="space-y-2.5">
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+                        Mật khẩu hiện tại
+                      </label>
+                      <input
+                        type="password"
+                        value={currentPass}
+                        onChange={(e) => { setCurrentPass(e.target.value); setPassError(''); }}
+                        placeholder="Nhập mật khẩu hiện tại..."
+                        className="w-full px-3 py-1.5 bg-zinc-50 dark:bg-zinc-800 text-xs border border-zinc-300 dark:border-zinc-700 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        autoFocus
+                        disabled={passSubmitting}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+                        Mật khẩu mới
+                      </label>
+                      <input
+                        type="password"
+                        value={newPass1}
+                        onChange={(e) => { setNewPass1(e.target.value); setPassError(''); }}
+                        placeholder="Nhập mật khẩu mới..."
+                        className="w-full px-3 py-1.5 bg-zinc-50 dark:bg-zinc-800 text-xs border border-zinc-300 dark:border-zinc-700 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        disabled={passSubmitting}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+                        Xác nhận lại mật khẩu mới
+                      </label>
+                      <input
+                        type="password"
+                        value={newPass2}
+                        onChange={(e) => { setNewPass2(e.target.value); setPassError(''); }}
+                        placeholder="Nhập lại mật khẩu mới..."
+                        className="w-full px-3 py-1.5 bg-zinc-50 dark:bg-zinc-800 text-xs border border-zinc-300 dark:border-zinc-700 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        disabled={passSubmitting}
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowPasswordSetup(false);
+                          setPassError('');
+                          setCurrentPass('');
+                          setNewPass1('');
+                          setNewPass2('');
+                        }}
+                        className="px-3 py-1.5 text-xs text-zinc-600 hover:text-zinc-800 dark:text-zinc-400 rounded"
+                        disabled={passSubmitting}
+                      >
+                        Đóng
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={passSubmitting}
+                        className="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium transition-colors disabled:opacity-50"
+                      >
+                        {passSubmitting ? 'Đang lưu...' : 'Lưu mật khẩu mới'}
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <form onSubmit={handleDisablePassword} className="space-y-2.5">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Sau khi hủy, bất kỳ ai cũng có thể mở và xem ghi chú này mà không cần nhập mật khẩu.
+                    </p>
+                    <div>
+                      <label className="block text-[11px] font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+                        Nhập mật khẩu hiện tại để xác nhận hủy:
+                      </label>
+                      <input
+                        type="password"
+                        value={currentPass}
+                        onChange={(e) => { setCurrentPass(e.target.value); setPassError(''); }}
+                        placeholder="Mật khẩu hiện tại..."
+                        className="w-full px-3 py-1.5 bg-zinc-50 dark:bg-zinc-800 text-xs border border-zinc-300 dark:border-zinc-700 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
+                        autoFocus
+                        disabled={passSubmitting}
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowPasswordSetup(false);
+                          setPassError('');
+                          setCurrentPass('');
+                        }}
+                        className="px-3 py-1.5 text-xs text-zinc-600 hover:text-zinc-800 dark:text-zinc-400 rounded"
+                        disabled={passSubmitting}
+                      >
+                        Đóng
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={passSubmitting}
+                        className="px-3 py-1.5 text-xs bg-red-600 hover:bg-red-700 text-white rounded-md font-medium transition-colors disabled:opacity-50"
+                      >
+                        {passSubmitting ? 'Đang hủy...' : 'Xác nhận hủy khóa'}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
             ) : (
               <form onSubmit={handleEnablePassword} className="space-y-2.5">
-                <input
-                  type="password"
-                  value={pass1}
-                  onChange={(e) => setPass1(e.target.value)}
-                  placeholder="Mật khẩu mới..."
-                  className="w-full px-3 py-1.5 bg-zinc-50 dark:bg-zinc-800 text-xs border border-zinc-300 dark:border-zinc-700 rounded focus:outline-none"
-                  autoFocus
-                />
-                <input
-                  type="password"
-                  value={pass2}
-                  onChange={(e) => setPass2(e.target.value)}
-                  placeholder="Nhập lại mật khẩu..."
-                  className="w-full px-3 py-1.5 bg-zinc-50 dark:bg-zinc-800 text-xs border border-zinc-300 dark:border-zinc-700 rounded focus:outline-none"
-                />
-                <div className="flex justify-end gap-2 pt-1">
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Ghi chú này sẽ được bảo vệ bằng mật khẩu riêng. Nhập 2 lần để tránh gõ nhầm.
+                </p>
+                <div>
+                  <label className="block text-[11px] font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+                    Mật khẩu ghi chú (tối thiểu 4 ký tự)
+                  </label>
+                  <input
+                    type="password"
+                    value={newPass1}
+                    onChange={(e) => { setNewPass1(e.target.value); setPassError(''); }}
+                    placeholder="Mật khẩu bảo vệ..."
+                    className="w-full px-3 py-1.5 bg-zinc-50 dark:bg-zinc-800 text-xs border border-zinc-300 dark:border-zinc-700 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    autoFocus
+                    disabled={passSubmitting}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+                    Nhập lại mật khẩu
+                  </label>
+                  <input
+                    type="password"
+                    value={newPass2}
+                    onChange={(e) => { setNewPass2(e.target.value); setPassError(''); }}
+                    placeholder="Xác nhận lại mật khẩu..."
+                    className="w-full px-3 py-1.5 bg-zinc-50 dark:bg-zinc-800 text-xs border border-zinc-300 dark:border-zinc-700 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    disabled={passSubmitting}
+                  />
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
                   <button
                     type="button"
-                    onClick={() => setShowPasswordSetup(false)}
-                    className="px-3 py-1 text-xs text-zinc-600"
+                    onClick={() => {
+                      setShowPasswordSetup(false);
+                      setPassError('');
+                      setNewPass1('');
+                      setNewPass2('');
+                    }}
+                    className="px-3 py-1.5 text-xs text-zinc-600 hover:text-zinc-800 dark:text-zinc-400 rounded"
+                    disabled={passSubmitting}
                   >
                     Hủy
                   </button>
                   <button
                     type="submit"
-                    className="px-3 py-1 text-xs bg-blue-600 text-white rounded font-medium"
+                    disabled={passSubmitting}
+                    className="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium transition-colors disabled:opacity-50"
                   >
-                    Lưu mật khẩu
+                    {passSubmitting ? 'Đang lưu...' : 'Lưu mật khẩu'}
                   </button>
                 </div>
               </form>

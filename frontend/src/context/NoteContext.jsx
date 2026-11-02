@@ -767,8 +767,10 @@ export function NoteProvider({ children }) {
             success = true;
           }
         } catch (err) {
-          console.warn('Lỗi disableLock qua API:', err);
+          throw err;
         }
+      } else {
+        success = true;
       }
     }
 
@@ -801,8 +803,40 @@ export function NoteProvider({ children }) {
       });
       return true;
     }
-    return false;
+    throw new Error('Mật khẩu hiện tại không đúng');
   }, [notes, isOnline, isAuthenticated]);
+
+  const changeNotePassword = useCallback(async (noteId, currentPassword, newPassword, confirmPassword) => {
+    if (isOnline && isAuthenticated) {
+      const isTempId = typeof noteId === 'string' && noteId.startsWith('note-');
+      if (!isTempId) {
+        try {
+          const res = await api.changeNotePassword(noteId, currentPassword, newPassword, confirmPassword);
+          if (!res || !res.success) {
+            throw new Error(res?.message || 'Đổi mật khẩu ghi chú thất bại');
+          }
+        } catch (err) {
+          throw err;
+        }
+      }
+    }
+
+    setNotes((prev) =>
+      prev.map((n) => {
+        if (n.id === noteId) {
+          const updated = {
+            ...n,
+            password: newPassword,
+            updatedAt: new Date().toISOString()
+          };
+          idbPut('notes', updated);
+          return updated;
+        }
+        return n;
+      })
+    );
+    return true;
+  }, [isOnline, isAuthenticated]);
 
   // Tiêu chí 25: Chia sẻ ghi chú
   const shareNote = useCallback(async (noteId, recipientEmail, permission = 'read') => {
@@ -981,6 +1015,7 @@ export function NoteProvider({ children }) {
         unlockNoteWithPassword,
         enableNotePassword,
         disableNotePassword,
+        changeNotePassword,
         noteToShare,
         setNoteToShare,
         shareNote,
